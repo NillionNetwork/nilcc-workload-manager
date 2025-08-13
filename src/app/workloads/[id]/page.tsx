@@ -123,11 +123,11 @@ export default function WorkloadDetailPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-foreground">
               {workload?.name || 'Workload Details'}
             </h1>
             {workload && (
-              <p className="text-gray-500 font-mono text-sm">{workload.id}</p>
+              <p className="text-muted-foreground font-mono text-sm">{workload.id}</p>
             )}
           </div>
         </div>
@@ -167,8 +167,8 @@ export default function WorkloadDetailPage() {
         <Card>
           <CardContent>
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-6 w-6 animate-spin text-gray-400 mr-3" />
-              <span className="text-gray-600">Loading workload details...</span>
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mr-3" />
+              <span className="text-muted-foreground">Loading workload details...</span>
             </div>
           </CardContent>
         </Card>
@@ -183,7 +183,7 @@ export default function WorkloadDetailPage() {
             <Card>
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Status & Access</h2>
+                  <h2 className="text-lg font-semibold text-card-foreground">Status & Access</h2>
                   <Badge variant={getStatusVariant(workload.status)}>
                     {workload.status}
                   </Badge>
@@ -194,7 +194,7 @@ export default function WorkloadDetailPage() {
                     <div>
                       <label className={components.label}>Application URL</label>
                       <div className="flex items-center space-x-2">
-                        <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm">
+                        <code className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm text-foreground">
                           https://{workload.domain}
                         </code>
                         {workload.status === 'running' && (
@@ -216,12 +216,14 @@ export default function WorkloadDetailPage() {
 
                 {workload.status === 'starting' && (
                   <Alert variant="info" className="mt-4">
-                    <Monitor className="h-4 w-4 mr-2" />
-                    <div>
-                      <p className="font-medium">Deployment in Progress</p>
-                      <p className="text-sm mt-1">
-                        Your workload is being deployed to nilCC. This typically takes 3-6 minutes.
-                      </p>
+                    <div className="flex items-start">
+                      <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Deployment in Progress</p>
+                        <p className="text-sm mt-1">
+                          Your workload is being deployed to nilCC. This typically takes 3-6 minutes.
+                        </p>
+                      </div>
                     </div>
                   </Alert>
                 )}
@@ -231,10 +233,10 @@ export default function WorkloadDetailPage() {
             {/* Docker Configuration */}
             <Card>
               <CardContent>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Docker Configuration</h2>
+                <h2 className="text-lg font-semibold text-card-foreground mb-4">Docker Configuration</h2>
                 <div>
                   <label className={components.label}>Docker Compose</label>
-                  <pre className="bg-gray-50 border border-gray-200 rounded p-4 text-sm overflow-x-auto">
+                  <pre className="bg-muted border border-border rounded p-4 text-sm overflow-x-auto text-foreground">
                     <code>{workload.dockerCompose}</code>
                   </pre>
                 </div>
@@ -245,15 +247,15 @@ export default function WorkloadDetailPage() {
             {workload.envVars && Object.keys(workload.envVars).length > 0 && (
               <Card>
                 <CardContent>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Environment Variables</h2>
+                  <h2 className="text-lg font-semibold text-card-foreground mb-4">Environment Variables</h2>
                   <div className="space-y-2">
                     {Object.entries(workload.envVars).map(([key, value]) => (
                       <div key={key} className="flex items-center space-x-2">
-                        <code className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm font-mono">
+                        <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
                           {key}
                         </code>
-                        <span className="text-gray-500">=</span>
-                        <code className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm font-mono">
+                        <span className="text-muted-foreground">=</span>
+                        <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
                           {value}
                         </code>
                       </div>
@@ -269,34 +271,34 @@ export default function WorkloadDetailPage() {
             {/* Resource Allocation */}
             <Card>
               <CardContent>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Resources</h2>
+                <h2 className="text-lg font-semibold text-card-foreground mb-4">Resources</h2>
                 <div className="space-y-3">
                   <div className="flex items-center">
-                    <MemoryStick className="h-4 w-4 text-gray-500 mr-2" />
-                    <span className="text-sm text-gray-600">Memory:</span>
-                    <span className="text-sm font-medium text-gray-900 ml-auto">
+                    <MemoryStick className="h-4 w-4 text-muted-foreground mr-2" />
+                    <span className="text-sm text-muted-foreground">Memory:</span>
+                    <span className="text-sm font-medium text-card-foreground ml-auto">
                       {workload.memory} MB
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <Cpu className="h-4 w-4 text-gray-500 mr-2" />
-                    <span className="text-sm text-gray-600">CPUs:</span>
-                    <span className="text-sm font-medium text-gray-900 ml-auto">
+                    <Cpu className="h-4 w-4 text-muted-foreground mr-2" />
+                    <span className="text-sm text-muted-foreground">CPUs:</span>
+                    <span className="text-sm font-medium text-card-foreground ml-auto">
                       {workload.cpus}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <HardDrive className="h-4 w-4 text-gray-500 mr-2" />
-                    <span className="text-sm text-gray-600">Storage:</span>
-                    <span className="text-sm font-medium text-gray-900 ml-auto">
+                    <HardDrive className="h-4 w-4 text-muted-foreground mr-2" />
+                    <span className="text-sm text-muted-foreground">Storage:</span>
+                    <span className="text-sm font-medium text-card-foreground ml-auto">
                       {workload.disk} GB
                     </span>
                   </div>
                   {workload.gpus > 0 && (
                     <div className="flex items-center">
-                      <Monitor className="h-4 w-4 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-600">GPUs:</span>
-                      <span className="text-sm font-medium text-gray-900 ml-auto">
+                      <Monitor className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-muted-foreground">GPUs:</span>
+                      <span className="text-sm font-medium text-card-foreground ml-auto">
                         {workload.gpus}
                       </span>
                     </div>
@@ -308,35 +310,35 @@ export default function WorkloadDetailPage() {
             {/* Metadata */}
             <Card>
               <CardContent>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Metadata</h2>
+                <h2 className="text-lg font-semibold text-card-foreground mb-4">Metadata</h2>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm text-gray-600">Created</label>
+                    <label className="text-sm text-muted-foreground">Created</label>
                     <div className="flex items-center mt-1">
-                      <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-900">
+                      <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-card-foreground">
                         {new Date(workload.createdAt).toLocaleString()}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Last Updated</label>
+                    <label className="text-sm text-muted-foreground">Last Updated</label>
                     <div className="flex items-center mt-1">
-                      <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-900">
+                      <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-card-foreground">
                         {new Date(workload.updatedAt).toLocaleString()}
                       </span>
                     </div>
                   </div>
                   {workload.description && (
                     <div>
-                      <label className="text-sm text-gray-600">Description</label>
-                      <p className="text-sm text-gray-900 mt-1">{workload.description}</p>
+                      <label className="text-sm text-muted-foreground">Description</label>
+                      <p className="text-sm text-card-foreground mt-1">{workload.description}</p>
                     </div>
                   )}
                   {workload.tags && workload.tags.length > 0 && (
                     <div>
-                      <label className="text-sm text-gray-600">Tags</label>
+                      <label className="text-sm text-muted-foreground">Tags</label>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {workload.tags.map((tag, index) => (
                           <Badge key={index} variant="neutral">

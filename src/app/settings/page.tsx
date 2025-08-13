@@ -47,10 +47,10 @@ export default function SettingsPage() {
       {/* Header */}
       <div>
         <div className="flex items-center mb-4">
-          <Settings className="h-6 w-6 text-gray-900 mr-3" />
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <Settings className="h-6 w-6 text-foreground mr-3" />
+          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         </div>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Configure your NilCC API key to manage workloads
         </p>
       </div>
@@ -66,15 +66,15 @@ export default function SettingsPage() {
       {/* API Key Configuration */}
       <Card>
         <CardContent>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">API Key Configuration</h2>
+          <h2 className="text-lg font-semibold text-card-foreground mb-4">API Key Configuration</h2>
           
           {/* Current API Key Status */}
           {apiKey && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mb-6 p-4 bg-accent border border-border rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-green-800">Current API Key</p>
-                  <p className="text-green-700 font-mono text-sm">
+                  <p className="font-medium text-accent-foreground">Current API Key</p>
+                  <p className="text-muted-foreground font-mono text-sm">
                     {showApiKey ? apiKey : maskedApiKey}
                   </p>
                 </div>

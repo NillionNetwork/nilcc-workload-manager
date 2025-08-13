@@ -10,31 +10,31 @@ export default function Home() {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-4xl font-bold text-foreground mb-4">
           nilCC Workload Manager
         </h1>
       </div>
 
       {/* API Key Status */}
       {!apiKey ? (
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-6">
+        <div className="bg-muted border border-border rounded-lg p-6">
           <div>
-            <h3 className="text-lg font-medium text-gray-800">Setup Required</h3>
-            <p className="text-gray-700">
+            <h3 className="text-lg font-medium text-foreground">Setup Required</h3>
+            <p className="text-muted-foreground">
               You need to configure your API key to start managing workloads.
             </p>
             <Link
               href="/settings"
-              className="inline-flex items-center mt-2 text-gray-800 hover:text-gray-900 underline"
+              className="inline-flex items-center mt-2 text-foreground hover:text-primary underline"
             >
               Go to Settings
             </Link>
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 border border-gray-300 rounded-lg p-6">
+        <div className="bg-accent border border-border rounded-lg p-6">
           <div>
-            <p className="text-gray-700">
+            <p className="text-accent-foreground">
               Your API key is configured. You can now manage workloads.
             </p>
           </div>
@@ -45,20 +45,20 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link
           href="/workloads"
-          className="group rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors"
+          className="group rounded-lg border border-border bg-card p-6 hover:bg-accent transition-colors"
         >
-          <h3 className="text-lg font-semibold text-gray-900">View Workloads</h3>
-          <p className="text-gray-600">
+          <h3 className="text-lg font-semibold text-card-foreground">View Workloads</h3>
+          <p className="text-muted-foreground">
             See all your running and scheduled workloads
           </p>
         </Link>
 
         <Link
           href="/workloads/create"
-          className="group rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors"
+          className="group rounded-lg border border-border bg-card p-6 hover:bg-accent transition-colors"
         >
-          <h3 className="text-lg font-semibold text-gray-900">Create Workload</h3>
-          <p className="text-gray-600">
+          <h3 className="text-lg font-semibold text-card-foreground">Create Workload</h3>
+          <p className="text-muted-foreground">
             Deploy a new Docker container securely
           </p>
         </Link>

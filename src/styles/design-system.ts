@@ -23,45 +23,45 @@ export const colors = {
 // Component classes that can be easily customized
 export const components = {
   // Cards and containers
-  card: 'bg-white rounded-lg border border-gray-200 shadow-sm',
+  card: 'bg-card rounded-lg border border-border shadow-sm',
   cardPadding: 'p-6',
   
   // Buttons
   button: {
-    base: 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2',
+    base: 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring cursor-pointer',
     sizes: {
       sm: 'px-3 py-2 text-sm',
       md: 'px-4 py-2 text-sm',
       lg: 'px-6 py-3 text-base',
     },
     variants: {
-      primary: 'bg-gray-900 text-white hover:bg-gray-800 focus:ring-gray-500',
-      secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-500',
-      danger: 'bg-gray-700 text-white hover:bg-gray-800 focus:ring-gray-500',
-      ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+      primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border',
+      danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+      ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
     }
   },
   
   // Form inputs
   input: {
-    base: 'block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-gray-500 focus:ring-gray-500 sm:text-sm',
-    error: 'border-gray-400 focus:border-gray-600 focus:ring-gray-600',
+    base: 'block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring sm:text-sm',
+    error: 'border-destructive focus:border-destructive focus:ring-destructive',
   },
   
   // Labels and text
-  label: 'block text-sm font-medium text-gray-700 mb-2',
-  helperText: 'text-sm text-gray-500',
-  errorText: 'text-sm text-gray-700',
+  label: 'block text-sm font-medium text-foreground mb-2',
+  helperText: 'text-sm text-muted-foreground',
+  errorText: 'text-sm text-destructive',
   
   // Status badges
   badge: {
     base: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
     variants: {
-      success: 'bg-gray-800 text-white',
-      warning: 'bg-gray-600 text-white',
-      danger: 'bg-gray-700 text-white',
-      neutral: 'bg-gray-100 text-gray-800',
-      info: 'bg-gray-500 text-white',
+      success: 'bg-primary text-primary-foreground',
+      warning: 'bg-muted text-muted-foreground',
+      danger: 'bg-destructive text-destructive-foreground',
+      neutral: 'bg-secondary text-secondary-foreground',
+      info: 'bg-accent text-accent-foreground',
     }
   },
   
@@ -71,20 +71,20 @@ export const components = {
   
   // Navigation
   nav: {
-    base: 'bg-white shadow-sm border-b',
+    base: 'bg-card shadow-sm border-b border-border',
     link: 'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors',
-    linkActive: 'border-gray-900 text-gray-900',
-    linkInactive: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+    linkActive: 'border-primary text-primary',
+    linkInactive: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground',
   },
   
   // Alerts/notifications
   alert: {
     base: 'rounded-lg p-4 border',
     variants: {
-      success: 'bg-gray-50 border-gray-300 text-gray-800',
-      warning: 'bg-gray-100 border-gray-400 text-gray-800',
-      danger: 'bg-gray-100 border-gray-400 text-gray-800',
-      info: 'bg-gray-50 border-gray-300 text-gray-800',
+      success: 'bg-accent border-border text-accent-foreground',
+      warning: 'bg-muted border-border text-muted-foreground',
+      danger: 'bg-destructive/10 border-destructive text-destructive',
+      info: 'bg-accent border-border text-accent-foreground',
     }
   }
 } as const;

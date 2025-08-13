@@ -240,8 +240,8 @@ export default function CreateWorkloadPage() {
     <div className={components.section}>
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Create New Workload</h1>
-        <p className="text-gray-600 text-sm">Deploy a container in a Confidential VM</p>
+        <h1 className="text-2xl font-bold text-foreground">Create New Workload</h1>
+        <p className="text-muted-foreground text-sm">Deploy a container in a Confidential VM</p>
       </div>
 
       {/* Error */}
@@ -256,7 +256,7 @@ export default function CreateWorkloadPage() {
         {/* Basic Information */}
         <Card>
           <CardContent className="py-4">
-            <h2 className="text-base font-semibold text-gray-900 mb-3">Basic Information</h2>
+            <h2 className="text-base font-semibold text-card-foreground mb-3">Basic Information</h2>
             <div className="space-y-3">
               <div>
                 <label className={components.label}>Workload Name *</label>
@@ -283,7 +283,7 @@ export default function CreateWorkloadPage() {
         {/* Docker Configuration */}
         <Card>
           <CardContent className="py-4">
-            <h2 className="text-base font-semibold text-gray-900 mb-3">Docker Configuration</h2>
+            <h2 className="text-base font-semibold text-card-foreground mb-3">Docker Configuration</h2>
             
             {/* Image Type Selection */}
             <div className="mb-4">
@@ -291,19 +291,21 @@ export default function CreateWorkloadPage() {
                 <button
                   type="button"
                   onClick={() => setImageType('public')}
-                  className={`p-3 border rounded-lg text-left transition-colors ${
+                  className={`p-3 border rounded-lg text-left transition-colors cursor-pointer ${
                     imageType === 'public'
-                      ? 'border-blue-500 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-muted-foreground bg-card text-card-foreground'
                   }`}
                 >
                   <div className="flex items-center mb-1">
                     <div className={`w-3 h-3 rounded-full mr-2 ${
-                      imageType === 'public' ? 'bg-blue-500' : 'bg-gray-300'
+                      imageType === 'public' ? 'bg-primary' : 'bg-muted-foreground'
                     }`} />
-                    <span className="font-medium text-sm">Public Docker Image</span>
+                    <span className={`font-medium text-sm ${
+                      imageType === 'public' ? 'text-primary' : 'text-card-foreground'
+                    }`}>Public Docker Image</span>
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     Use an image from Docker Hub
                   </p>
                 </button>
@@ -311,19 +313,21 @@ export default function CreateWorkloadPage() {
                 <button
                   type="button"
                   onClick={() => setImageType('private')}
-                  className={`p-3 border rounded-lg text-left transition-colors ${
+                  className={`p-3 border rounded-lg text-left transition-colors cursor-pointer ${
                     imageType === 'private'
-                      ? 'border-blue-500 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-muted-foreground bg-card text-card-foreground'
                   }`}
                 >
                   <div className="flex items-center mb-1">
                     <div className={`w-3 h-3 rounded-full mr-2 ${
-                      imageType === 'private' ? 'bg-blue-500' : 'bg-gray-300'
+                      imageType === 'private' ? 'bg-primary' : 'bg-muted-foreground'
                     }`} />
-                    <span className="font-medium text-sm">Docker Compose</span>
+                    <span className={`font-medium text-sm ${
+                      imageType === 'private' ? 'text-primary' : 'text-card-foreground'
+                    }`}>Docker Compose</span>
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     Full Docker Compose config
                   </p>
                 </button>
@@ -375,7 +379,7 @@ export default function CreateWorkloadPage() {
                 {dockerImage && (
                   <div>
                     <label className={components.label}>Docker Compose Preview</label>
-                    <pre className="bg-gray-50 border border-gray-200 rounded p-3 text-sm overflow-x-auto">
+                    <pre className="bg-muted border border-border rounded p-3 text-sm overflow-x-auto text-foreground">
                       <code>{generateComposePreview()}</code>
                     </pre>
                   </div>
@@ -453,7 +457,7 @@ export default function CreateWorkloadPage() {
         {/* Resource Allocation */}
         <Card>
           <CardContent className="py-4">
-            <h2 className="text-base font-semibold text-gray-900 mb-3">Resources</h2>
+            <h2 className="text-base font-semibold text-card-foreground mb-3">Resources</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
                 <label className={components.label}>Memory (MB) *</label>
@@ -506,7 +510,7 @@ export default function CreateWorkloadPage() {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-gray-900">Environment Variables</h2>
+              <h2 className="text-base font-semibold text-card-foreground">Environment Variables</h2>
               <Button type="button" variant="secondary" size="sm" onClick={addEnvVar}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Variable
@@ -514,7 +518,7 @@ export default function CreateWorkloadPage() {
             </div>
             
             {envVars.length === 0 ? (
-              <p className="text-gray-500 text-sm">No environment variables added</p>
+              <p className="text-muted-foreground text-sm">No environment variables added</p>
             ) : (
               <div className="space-y-2">
                 {envVars.map((envVar, index) => (
@@ -525,7 +529,7 @@ export default function CreateWorkloadPage() {
                       placeholder="VARIABLE_NAME"
                       className="font-mono"
                     />
-                    <span className="text-gray-500">=</span>
+                    <span className="text-muted-foreground">=</span>
                     <Input
                       value={envVar.value}
                       onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
@@ -549,7 +553,7 @@ export default function CreateWorkloadPage() {
         </Card>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between pt-4 border-t border-border">
           <Link href="/workloads">
             <Button variant="ghost">Cancel</Button>
           </Link>

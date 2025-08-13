@@ -76,10 +76,10 @@ export default function WorkloadsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center mb-2">
-            <Layers className="h-6 w-6 text-gray-900 mr-3" />
-            <h1 className="text-2xl font-bold text-gray-900">Workloads</h1>
+            <Layers className="h-6 w-6 text-foreground mr-3" />
+            <h1 className="text-2xl font-bold text-foreground">Workloads</h1>
           </div>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Manage your nilCC container deployments
           </p>
         </div>
@@ -114,8 +114,8 @@ export default function WorkloadsPage() {
         <Card>
           <CardContent>
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-6 w-6 animate-spin text-gray-400 mr-3" />
-              <span className="text-gray-600">Loading workloads...</span>
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mr-3" />
+              <span className="text-muted-foreground">Loading workloads...</span>
             </div>
           </CardContent>
         </Card>
@@ -126,9 +126,9 @@ export default function WorkloadsPage() {
         <Card>
           <CardContent>
             <div className="text-center py-12">
-              <Layers className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No workloads found</h3>
-              <p className="text-gray-600 mb-6">
+              <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-card-foreground mb-2">No workloads found</h3>
+              <p className="text-muted-foreground mb-6">
                 Get started by creating your first secure workload
               </p>
               <Link href="/workloads/create">
@@ -150,10 +150,10 @@ export default function WorkloadsPage() {
               <CardContent>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-card-foreground truncate">
                       {workload.name}
                     </h3>
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                       {workload.id}
                     </p>
                   </div>
@@ -162,7 +162,7 @@ export default function WorkloadsPage() {
                   </Badge>
                 </div>
 
-                <div className="space-y-2 text-sm text-gray-600 mb-4">
+                <div className="space-y-2 text-sm text-muted-foreground mb-4">
                   <p>
                     <span className="font-medium">Created:</span>{' '}
                     {new Date(workload.createdAt).toLocaleDateString()}

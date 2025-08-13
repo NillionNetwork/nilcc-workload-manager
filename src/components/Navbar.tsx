@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Settings, Layers, Plus } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { components, cn } from '@/styles/design-system';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ThemeToggleSlider } from '@/components/ui';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -23,7 +23,7 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
+              <Link href="/" className="text-xl font-bold text-foreground">
                 nilCC Workload Manager
               </Link>
             </div>
@@ -46,7 +46,8 @@ export default function Navbar() {
               })}
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
+            <ThemeToggleSlider />
             <div className="flex-shrink-0">
               {apiKey ? (
                 <Badge variant="success">API Key Set</Badge>
