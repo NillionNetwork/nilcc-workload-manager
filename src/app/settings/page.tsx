@@ -112,9 +112,6 @@ export default function SettingsPage() {
                 placeholder="Enter your NilCC API key"
                 className="font-mono"
               />
-              <p className={components.helperText}>
-                Your API key is stored locally in your browser and never sent to external servers
-              </p>
             </div>
 
             <div>
