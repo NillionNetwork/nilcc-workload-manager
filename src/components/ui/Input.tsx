@@ -21,6 +21,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   }
 );
 
+Input.displayName = 'Input';
+
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: boolean;
 }
@@ -41,3 +43,5 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     );
   }
 );
+
+Textarea.displayName = 'Textarea';

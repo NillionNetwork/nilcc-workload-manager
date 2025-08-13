@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings, Home, Layers, Plus } from 'lucide-react';
+import { Settings, Layers, Plus } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { components, cn } from '@/styles/design-system';
 import { Badge, Button } from '@/components/ui';

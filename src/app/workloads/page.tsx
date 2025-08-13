@@ -1,22 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Card, CardContent, Button, Badge, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
 import { WorkloadResponse } from '@/lib/nilcc-types';
-import { Layers, Plus, ExternalLink, Trash2, RefreshCw, Settings, Eye } from 'lucide-react';
+import { Layers, Plus, ExternalLink, RefreshCw, Settings, Eye } from 'lucide-react';
 
 export default function WorkloadsPage() {
   const { client, apiKey } = useSettings();
-  const router = useRouter();
   const [workloads, setWorkloads] = useState<WorkloadResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWorkloads = async () => {
+  const fetchWorkloads = useCallback(async () => {
     if (!client) return;
     
     try {
@@ -24,12 +22,17 @@ export default function WorkloadsPage() {
       setError(null);
       const data = await client.listWorkloads();
       setWorkloads(data);
-    } catch (err: any) {
-      setError(err.response?.data?.errors?.[0] || 'Failed to fetch workloads');
+    } catch (err) {
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
+        setError(errorWithResponse.response?.data?.errors?.[0] || err.message || 'Failed to fetch workloads');
+      } else {
+        setError('Failed to fetch workloads');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [client]);
 
   useEffect(() => {
     if (client) {
@@ -37,7 +40,7 @@ export default function WorkloadsPage() {
     } else {
       setLoading(false);
     }
-  }, [client]);
+  }, [client, fetchWorkloads]);
 
   const getStatusVariant = (status: string) => {
     switch (status) {

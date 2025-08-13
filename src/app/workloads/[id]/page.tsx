@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -8,7 +8,6 @@ import { Card, CardContent, Button, Badge, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
 import { WorkloadResponse } from '@/lib/nilcc-types';
 import { 
-  ArrowLeft, 
   ExternalLink, 
   Trash2, 
   RefreshCw, 
@@ -17,8 +16,7 @@ import {
   Cpu,
   HardDrive,
   MemoryStick,
-  Monitor,
-  Code
+  Monitor
 } from 'lucide-react';
 
 export default function WorkloadDetailPage() {
@@ -30,7 +28,7 @@ export default function WorkloadDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchWorkload = async (showLoader = true) => {
+  const fetchWorkload = useCallback(async (showLoader = true) => {
     if (!client || !id) return;
     
     try {
@@ -40,14 +38,19 @@ export default function WorkloadDetailPage() {
       setError(null);
       const data = await client.getWorkload(id as string);
       setWorkload(data);
-    } catch (err: any) {
-      setError(err.response?.data?.errors?.[0] || 'Failed to fetch workload details');
+    } catch (err) {
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
+        setError(errorWithResponse.response?.data?.errors?.[0] || err.message || 'Failed to fetch workload details');
+      } else {
+        setError('Failed to fetch workload details');
+      }
     } finally {
       if (showLoader) {
         setLoading(false);
       }
     }
-  };
+  }, [client, id]);
 
   useEffect(() => {
     if (client && id) {
@@ -55,7 +58,7 @@ export default function WorkloadDetailPage() {
     } else {
       setLoading(false);
     }
-  }, [client, id]);
+  }, [client, id, fetchWorkload]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -66,7 +69,7 @@ export default function WorkloadDetailPage() {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [client, id]);
+  }, [client, id, fetchWorkload]);
 
   const handleDelete = async () => {
     if (!client || !workload || !confirm(`Are you sure you want to delete "${workload.name}"?`)) return;
@@ -75,8 +78,13 @@ export default function WorkloadDetailPage() {
       setDeleting(true);
       await client.deleteWorkload(workload.id);
       router.push('/workloads');
-    } catch (err: any) {
-      alert(`Failed to delete workload: ${err.response?.data?.errors?.[0] || err.message}`);
+    } catch (err) {
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
+        alert(`Failed to delete workload: ${errorWithResponse.response?.data?.errors?.[0] || err.message}`);
+      } else {
+        alert('Failed to delete workload');
+      }
       setDeleting(false);
     }
   };
@@ -127,7 +135,7 @@ export default function WorkloadDetailPage() {
         <div className="flex items-center space-x-3">
           <Button
             variant="secondary"
-            onClick={fetchWorkload}
+            onClick={() => fetchWorkload()}
             loading={loading}
           >
             <RefreshCw className="h-4 w-4 mr-2" />

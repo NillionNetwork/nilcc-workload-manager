@@ -51,7 +51,22 @@ export async function POST(request: NextRequest) {
 
 
   // Transform the request based on whether it's a public Docker image or Docker Compose
-  let nilccPayload: any = {
+  interface NilccPayload {
+    name: string;
+    memory: number;
+    cpus: number;
+    disk: number;
+    gpus: number;
+    description?: string;
+    tags?: string[];
+    envVars?: Record<string, string>;
+    files?: Record<string, string>;
+    dockerCompose?: string;
+    publicContainerName?: string;
+    publicContainerPort?: number;
+  }
+
+  const nilccPayload: NilccPayload = {
     name: body.name,
     memory: body.memory,
     cpus: body.cpus,

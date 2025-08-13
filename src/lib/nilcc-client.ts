@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
-import { WorkloadOptions, CreateWorkloadRequest, WorkloadResponse, ApiErrorResponse } from './nilcc-types';
+import { CreateWorkloadRequest, WorkloadResponse } from './nilcc-types';
 
 export class NilccClient {
   private readonly apiKey: string;

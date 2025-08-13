@@ -7,6 +7,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { Card, CardContent, Button, Input, Textarea, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
 import { Plus, Settings } from 'lucide-react';
+import { CreateWorkloadRequest } from '@/lib/nilcc-types';
 
 export default function CreateWorkloadPage() {
   const router = useRouter();
@@ -164,7 +165,7 @@ export default function CreateWorkloadPage() {
         }
       });
 
-      let workloadData: any = {
+      const baseData = {
         name,
         description: description || undefined,
         memory: parseInt(memory),
@@ -174,26 +175,29 @@ export default function CreateWorkloadPage() {
         envVars: Object.keys(envVarsObject).length > 0 ? envVarsObject : undefined,
       };
 
-      if (imageType === 'public') {
-        workloadData = {
-          ...workloadData,
-          dockerImage,
-          containerPort: parseInt(containerPort),
-          serviceName,
-        };
-      } else {
-        workloadData = {
-          ...workloadData,
-          dockerCompose,
-          serviceToExpose,
-          servicePortToExpose: parseInt(servicePortToExpose),
-        };
-      }
+      const workloadData = imageType === 'public' 
+        ? {
+            ...baseData,
+            dockerImage,
+            containerPort: parseInt(containerPort),
+            serviceName,
+          }
+        : {
+            ...baseData,
+            dockerCompose,
+            serviceToExpose,
+            servicePortToExpose: parseInt(servicePortToExpose),
+          };
 
-      const response = await client.createWorkload(workloadData);
+      const response = await client.createWorkload(workloadData as CreateWorkloadRequest);
       router.push(`/workloads/${response.id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.errors?.[0] || err.message || 'Failed to create workload');
+    } catch (err) {
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
+        setError(errorWithResponse.response?.data?.errors?.[0] || err.message || 'Failed to create workload');
+      } else {
+        setError('Failed to create workload');
+      }
     } finally {
       setCreating(false);
     }
