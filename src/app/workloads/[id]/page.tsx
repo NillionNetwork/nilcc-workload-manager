@@ -220,8 +220,7 @@ export default function WorkloadDetailPage() {
                     <div>
                       <p className="font-medium">Deployment in Progress</p>
                       <p className="text-sm mt-1">
-                        Your workload is being deployed in a secure Confidential VM. 
-                        This typically takes 3-6 minutes.
+                        Your workload is being deployed to nilCC. This typically takes 3-6 minutes.
                       </p>
                     </div>
                   </Alert>

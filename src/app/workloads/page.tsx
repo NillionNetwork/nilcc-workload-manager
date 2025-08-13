@@ -80,7 +80,7 @@ export default function WorkloadsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Workloads</h1>
           </div>
           <p className="text-gray-600">
-            Manage your secure container deployments
+            Manage your nilCC container deployments
           </p>
         </div>
         <div className="flex items-center space-x-3">
