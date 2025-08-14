@@ -55,3 +55,35 @@ export interface ApiErrorResponse {
   ts: string;
   errorsTrace?: string;
 }
+
+export interface Container {
+  name?: string;
+  names?: string[];
+  image: string;
+  imageId: string;
+  status?: string;
+  state?: string;
+}
+
+export interface ListContainersRequest {
+  id: string;
+}
+
+export interface WorkloadContainerLogsRequest {
+  id: string;
+  container: string;
+  tail: boolean;
+  stream: 'stdout' | 'stderr';
+  maxLines?: number;
+}
+
+export interface WorkloadSystemLogsRequest {
+  id: string;
+  tail: boolean;
+  source?: 'cvm-agent';
+  maxLines?: number;
+}
+
+export interface LogsResponse {
+  lines: string[];
+}

@@ -1,5 +1,13 @@
 import axios, { AxiosResponse } from 'axios';
-import { CreateWorkloadRequest, WorkloadResponse } from './nilcc-types';
+import { 
+  CreateWorkloadRequest, 
+  WorkloadResponse,
+  Container,
+  ListContainersRequest,
+  WorkloadContainerLogsRequest,
+  WorkloadSystemLogsRequest,
+  LogsResponse
+} from './nilcc-types';
 
 export class NilccClient {
   private readonly apiKey: string;
@@ -47,6 +55,36 @@ export class NilccClient {
   async listWorkloads(): Promise<WorkloadResponse[]> {
     const response: AxiosResponse<WorkloadResponse[]> = await axios.get(
       `${this.baseUrl}/workloads`,
+      { headers: this.headers }
+    );
+
+    return response.data;
+  }
+
+  async listContainers(workloadId: string): Promise<Container[]> {
+    const response: AxiosResponse<Container[]> = await axios.post(
+      `${this.baseUrl}/workloads/${workloadId}/containers`,
+      { id: workloadId },
+      { headers: this.headers }
+    );
+
+    return response.data;
+  }
+
+  async getContainerLogs(request: WorkloadContainerLogsRequest): Promise<LogsResponse> {
+    const response: AxiosResponse<LogsResponse> = await axios.post(
+      `${this.baseUrl}/workloads/${request.id}/containers/logs`,
+      request,
+      { headers: this.headers }
+    );
+
+    return response.data;
+  }
+
+  async getSystemLogs(request: WorkloadSystemLogsRequest): Promise<LogsResponse> {
+    const response: AxiosResponse<LogsResponse> = await axios.post(
+      `${this.baseUrl}/workloads/${request.id}/logs`,
+      request,
       { headers: this.headers }
     );
 

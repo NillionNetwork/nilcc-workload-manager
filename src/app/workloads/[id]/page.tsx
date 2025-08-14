@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Card, CardContent, Button, Badge, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
-import { WorkloadResponse } from '@/lib/nilcc-types';
+import { WorkloadResponse, Container, LogsResponse } from '@/lib/nilcc-types';
 import { 
   ExternalLink, 
   Trash2, 
@@ -16,7 +16,9 @@ import {
   Cpu,
   HardDrive,
   MemoryStick,
-  Monitor
+  Monitor,
+  FileText,
+  Terminal
 } from 'lucide-react';
 
 export default function WorkloadDetailPage() {
@@ -27,6 +29,27 @@ export default function WorkloadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Logs state
+  const [containers, setContainers] = useState<Container[]>([]);
+  const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [containerLogs, setContainerLogs] = useState<Record<string, Record<'stdout' | 'stderr', string[]>>>({});
+  const [selectedContainer, setSelectedContainer] = useState<string>('');
+  const [activeLogsTab, setActiveLogsTab] = useState<'system' | 'container'>('system');
+  const [activeStreamTab, setActiveStreamTab] = useState<'stdout' | 'stderr'>('stderr');
+  const [systemLogsLoading, setSystemLogsLoading] = useState(false);
+  const [containerLogsLoading, setContainerLogsLoading] = useState<Record<'stdout' | 'stderr', boolean>>({ stdout: false, stderr: false });
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [tailLogs, setTailLogs] = useState(true);
+  
+  // Ref for auto-scrolling logs
+  const logsContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    if (logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
+  }, []);
 
   const fetchWorkload = useCallback(async (showLoader = true) => {
     if (!client || !id) return;
@@ -52,13 +75,110 @@ export default function WorkloadDetailPage() {
     }
   }, [client, id]);
 
+  const fetchContainers = useCallback(async () => {
+    if (!client || !id) return;
+    
+    try {
+      const containerList = await client.listContainers(id as string);
+      setContainers(containerList);
+      if (containerList.length > 0 && !selectedContainer) {
+        const firstContainer = containerList[0];
+        const containerName = (firstContainer.names && firstContainer.names[0]) || firstContainer.name || `container-${0}`;
+        setSelectedContainer(containerName);
+      }
+    } catch (err) {
+      console.error('Failed to fetch containers:', err);
+    }
+  }, [client, id, selectedContainer]);
+
+  const fetchSystemLogs = useCallback(async () => {
+    if (!client || !id) return;
+    
+    try {
+      setSystemLogsLoading(true);
+      setLogsError(null);
+      const response = await client.getSystemLogs({
+        id: id as string,
+        tail: tailLogs,
+        maxLines: 100
+      });
+      setSystemLogs(response.lines);
+      // Auto-scroll to bottom after a brief delay to ensure DOM is updated
+      setTimeout(scrollToBottom, 100);
+    } catch (err) {
+      if (err instanceof Error) {
+        setLogsError(err.message);
+      } else {
+        setLogsError('Failed to fetch system logs');
+      }
+    } finally {
+      setSystemLogsLoading(false);
+    }
+  }, [client, id, tailLogs]);
+
+  const fetchContainerLogs = useCallback(async (containerName: string, stream: 'stdout' | 'stderr') => {
+    if (!client || !id) return;
+    
+    try {
+      setContainerLogsLoading(prev => ({ ...prev, [stream]: true }));
+      setLogsError(null);
+      const response = await client.getContainerLogs({
+        id: id as string,
+        container: containerName,
+        tail: tailLogs,
+        stream: stream,
+        maxLines: 100
+      });
+      setContainerLogs(prev => ({
+        ...prev,
+        [containerName]: {
+          ...prev[containerName],
+          [stream]: response.lines
+        }
+      }));
+      // Auto-scroll to bottom after a brief delay to ensure DOM is updated
+      setTimeout(scrollToBottom, 100);
+    } catch (err) {
+      if (err instanceof Error) {
+        setLogsError(err.message);
+      } else {
+        setLogsError('Failed to fetch container logs');
+      }
+    } finally {
+      setContainerLogsLoading(prev => ({ ...prev, [stream]: false }));
+    }
+  }, [client, id, tailLogs]);
+
+  const refreshLogs = useCallback(() => {
+    if (activeLogsTab === 'system') {
+      fetchSystemLogs();
+    } else if (selectedContainer) {
+      fetchContainerLogs(selectedContainer, activeStreamTab);
+    }
+  }, [activeLogsTab, selectedContainer, activeStreamTab, fetchSystemLogs, fetchContainerLogs]);
+
   useEffect(() => {
     if (client && id) {
       fetchWorkload();
+      fetchContainers();
     } else {
       setLoading(false);
     }
-  }, [client, id, fetchWorkload]);
+  }, [client, id, fetchWorkload, fetchContainers]);
+
+  // Fetch logs when workload is ready and running
+  useEffect(() => {
+    if (workload && workload.status === 'running' && client && id) {
+      fetchSystemLogs();
+    }
+  }, [workload, client, id, fetchSystemLogs]);
+
+  // Fetch container logs when selected container or stream changes
+  useEffect(() => {
+    if (selectedContainer && activeLogsTab === 'container' && workload?.status === 'running') {
+      fetchContainerLogs(selectedContainer, activeStreamTab);
+    }
+  }, [selectedContainer, activeLogsTab, activeStreamTab, workload?.status, fetchContainerLogs]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -260,6 +380,162 @@ export default function WorkloadDetailPage() {
                         </code>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Logs Section */}
+            {workload.status === 'running' && (
+              <Card>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-card-foreground">Logs</h2>
+                    <div className="flex items-center space-x-2">
+                      <label className="flex items-center space-x-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={tailLogs}
+                          onChange={(e) => setTailLogs(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <span className="text-muted-foreground">Tail logs</span>
+                      </label>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={refreshLogs}
+                        loading={activeLogsTab === 'system' ? systemLogsLoading : containerLogsLoading[activeStreamTab]}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Logs Tabs */}
+                  <div className="border-b border-border mb-4">
+                    <nav className="flex space-x-8">
+                      <button
+                        onClick={() => setActiveLogsTab('system')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                          activeLogsTab === 'system'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                        }`}
+                      >
+                        <FileText className="h-4 w-4 inline mr-2" />
+                        System Logs
+                      </button>
+                      <button
+                        onClick={() => setActiveLogsTab('container')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                          activeLogsTab === 'container'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                        }`}
+                      >
+                        <Terminal className="h-4 w-4 inline mr-2" />
+                        Container Logs
+                      </button>
+                    </nav>
+                  </div>
+
+                  {/* Container Selection */}
+                  {activeLogsTab === 'container' && containers.length > 0 && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">
+                        Select Container
+                      </label>
+                      <select
+                        value={selectedContainer}
+                        onChange={(e) => setSelectedContainer(e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                      >
+                        {containers.map((container, index) => {
+                          const containerName = (container.names && container.names[0]) || container.name || `container-${index}`;
+                          const displayName = (container.names && container.names[0]) || container.name || `Container ${index + 1}`;
+                          return (
+                            <option key={`${containerName}-${index}`} value={containerName}>
+                              {displayName} ({container.state || container.status || 'Unknown'})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Stream Tabs for Container Logs */}
+                  {activeLogsTab === 'container' && (
+                    <div className="border-b border-border mb-4">
+                      <nav className="flex space-x-8">
+                        <button
+                          onClick={() => setActiveStreamTab('stderr')}
+                          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeStreamTab === 'stderr'
+                              ? 'border-primary text-primary'
+                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                          }`}
+                        >
+                          stderr
+                        </button>
+                        <button
+                          onClick={() => setActiveStreamTab('stdout')}
+                          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeStreamTab === 'stdout'
+                              ? 'border-primary text-primary'
+                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                          }`}
+                        >
+                          stdout
+                        </button>
+                      </nav>
+                    </div>
+                  )}
+
+                  {/* Logs Display */}
+                  <div 
+                    ref={logsContainerRef}
+                    className="bg-muted rounded-lg p-4 h-96 overflow-auto font-mono text-sm"
+                  >
+                    {logsError ? (
+                      <div className="text-destructive">
+                        Error: {logsError}
+                      </div>
+                    ) : (activeLogsTab === 'system' && systemLogsLoading) || (activeLogsTab === 'container' && containerLogsLoading[activeStreamTab]) ? (
+                      <div className="text-muted-foreground flex items-center">
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Loading logs...
+                      </div>
+                    ) : activeLogsTab === 'system' ? (
+                      systemLogs.length > 0 ? (
+                        <div className="space-y-1">
+                          {systemLogs.map((line, index) => (
+                            <div key={index} className="text-foreground whitespace-pre-wrap break-words">
+                              {line}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground">No system logs available</div>
+                      )
+                    ) : selectedContainer && containerLogs[selectedContainer] && containerLogs[selectedContainer][activeStreamTab] ? (
+                      containerLogs[selectedContainer][activeStreamTab].length > 0 ? (
+                        <div className="space-y-1">
+                          {containerLogs[selectedContainer][activeStreamTab].map((line, index) => (
+                            <div key={index} className="text-foreground whitespace-pre-wrap break-words">
+                              {line}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground">No {activeStreamTab} logs available</div>
+                      )
+                    ) : (
+                      <div className="text-muted-foreground">
+                        {selectedContainer ? `No ${activeStreamTab} logs available` : 'Select a container to view logs'}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
