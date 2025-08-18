@@ -3,8 +3,6 @@ export interface WorkloadOptions {
   cpus?: number;
   disk?: number;
   gpu?: number;
-  description?: string;
-  tags?: string[];
   envVars?: Record<string, string>;
 }
 
@@ -14,8 +12,6 @@ export interface CreateWorkloadRequest {
   cpus: number;
   disk: number;
   gpus: number;
-  description?: string;
-  tags?: string[];
   envVars?: Record<string, string>;
   files?: Record<string, string>;
   
@@ -31,7 +27,7 @@ export interface CreateWorkloadRequest {
 }
 
 export interface WorkloadResponse {
-  id: string;
+  workloadId: string;
   name: string;
   dockerCompose: string;
   publicContainerName: string;
@@ -40,10 +36,9 @@ export interface WorkloadResponse {
   cpus: number;
   disk: number;
   gpus: number;
-  status: 'pending' | 'running' | 'stopped' | 'error' | 'scheduled' | 'starting';
-  domain?: string;
-  description?: string;
-  tags?: string[];
+  status: 'scheduled' | 'starting' | 'running' | 'stopped' | 'error';
+  domain: string;
+  accountId: string;
   envVars?: Record<string, string>;
   files?: Record<string, string>;
   createdAt: string;
@@ -66,11 +61,11 @@ export interface Container {
 }
 
 export interface ListContainersRequest {
-  id: string;
+  workloadId: string;
 }
 
 export interface WorkloadContainerLogsRequest {
-  id: string;
+  workloadId: string;
   container: string;
   tail: boolean;
   stream: 'stdout' | 'stderr';
@@ -78,7 +73,7 @@ export interface WorkloadContainerLogsRequest {
 }
 
 export interface WorkloadSystemLogsRequest {
-  id: string;
+  workloadId: string;
   tail: boolean;
   source?: 'cvm-agent';
   maxLines?: number;

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Card, CardContent, Button, Badge, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
-import { WorkloadResponse, Container, LogsResponse } from '@/lib/nilcc-types';
+import { WorkloadResponse, Container } from '@/lib/nilcc-types';
 import { 
   ExternalLink, 
   Trash2, 
@@ -18,7 +18,9 @@ import {
   MemoryStick,
   Monitor,
   FileText,
-  Terminal
+  Terminal,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function WorkloadDetailPage() {
@@ -41,6 +43,7 @@ export default function WorkloadDetailPage() {
   const [containerLogsLoading, setContainerLogsLoading] = useState<Record<'stdout' | 'stderr', boolean>>({ stdout: false, stderr: false });
   const [logsError, setLogsError] = useState<string | null>(null);
   const [tailLogs, setTailLogs] = useState(true);
+  const [copiedCompose, setCopiedCompose] = useState(false);
   
   // Ref for auto-scrolling logs
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +101,7 @@ export default function WorkloadDetailPage() {
       setSystemLogsLoading(true);
       setLogsError(null);
       const response = await client.getSystemLogs({
-        id: id as string,
+        workloadId: id as string,
         tail: tailLogs,
         maxLines: 100
       });
@@ -114,7 +117,7 @@ export default function WorkloadDetailPage() {
     } finally {
       setSystemLogsLoading(false);
     }
-  }, [client, id, tailLogs]);
+  }, [client, id, tailLogs, scrollToBottom]);
 
   const fetchContainerLogs = useCallback(async (containerName: string, stream: 'stdout' | 'stderr') => {
     if (!client || !id) return;
@@ -123,7 +126,7 @@ export default function WorkloadDetailPage() {
       setContainerLogsLoading(prev => ({ ...prev, [stream]: true }));
       setLogsError(null);
       const response = await client.getContainerLogs({
-        id: id as string,
+        workloadId: id as string,
         container: containerName,
         tail: tailLogs,
         stream: stream,
@@ -147,7 +150,7 @@ export default function WorkloadDetailPage() {
     } finally {
       setContainerLogsLoading(prev => ({ ...prev, [stream]: false }));
     }
-  }, [client, id, tailLogs]);
+  }, [client, id, tailLogs, scrollToBottom]);
 
   const refreshLogs = useCallback(() => {
     if (activeLogsTab === 'system') {
@@ -160,18 +163,31 @@ export default function WorkloadDetailPage() {
   useEffect(() => {
     if (client && id) {
       fetchWorkload();
-      fetchContainers();
     } else {
       setLoading(false);
     }
-  }, [client, id, fetchWorkload, fetchContainers]);
+  }, [client, id, fetchWorkload]);
 
-  // Fetch logs when workload is ready and running
+  // Fetch system logs when workload exists (for all statuses)
   useEffect(() => {
-    if (workload && workload.status === 'running' && client && id) {
+    if (workload && client && id) {
       fetchSystemLogs();
     }
   }, [workload, client, id, fetchSystemLogs]);
+
+  // Fetch containers only when workload is running
+  useEffect(() => {
+    if (workload && workload.status === 'running' && client && id) {
+      fetchContainers();
+    }
+  }, [workload, client, id, fetchContainers]);
+
+  // Switch to system logs tab when workload is not running
+  useEffect(() => {
+    if (workload && workload.status !== 'running' && activeLogsTab === 'container') {
+      setActiveLogsTab('system');
+    }
+  }, [workload, activeLogsTab]);
 
   // Fetch container logs when selected container or stream changes
   useEffect(() => {
@@ -196,7 +212,7 @@ export default function WorkloadDetailPage() {
 
     try {
       setDeleting(true);
-      await client.deleteWorkload(workload.id);
+      await client.deleteWorkload(workload.workloadId);
       router.push('/workloads');
     } catch (err) {
       if (err instanceof Error) {
@@ -247,7 +263,7 @@ export default function WorkloadDetailPage() {
               {workload?.name || 'Workload Details'}
             </h1>
             {workload && (
-              <p className="text-muted-foreground font-mono text-sm">{workload.id}</p>
+              <p className="text-muted-foreground font-mono text-sm">{workload.workloadId}</p>
             )}
           </div>
         </div>
@@ -355,7 +371,31 @@ export default function WorkloadDetailPage() {
               <CardContent>
                 <h2 className="text-lg font-semibold text-card-foreground mb-4">Docker Configuration</h2>
                 <div>
-                  <label className={components.label}>Docker Compose</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className={components.label}>Docker Compose</label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(workload.dockerCompose);
+                        setCopiedCompose(true);
+                        setTimeout(() => setCopiedCompose(false), 2000);
+                      }}
+                      className="text-xs"
+                    >
+                      {copiedCompose ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <pre className="bg-muted border border-border rounded p-4 text-sm overflow-x-auto text-foreground">
                     <code>{workload.dockerCompose}</code>
                   </pre>
@@ -386,7 +426,7 @@ export default function WorkloadDetailPage() {
             )}
 
             {/* Logs Section */}
-            {workload.status === 'running' && (
+            {(workload.status === 'running' || workload.status === 'starting' || workload.status === 'scheduled') && (
               <Card>
                 <CardContent>
                   <div className="flex items-center justify-between mb-4">
@@ -427,17 +467,19 @@ export default function WorkloadDetailPage() {
                         <FileText className="h-4 w-4 inline mr-2" />
                         System Logs
                       </button>
-                      <button
-                        onClick={() => setActiveLogsTab('container')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                          activeLogsTab === 'container'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
-                      >
-                        <Terminal className="h-4 w-4 inline mr-2" />
-                        Container Logs
-                      </button>
+                      {workload.status === 'running' && (
+                        <button
+                          onClick={() => setActiveLogsTab('container')}
+                          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeLogsTab === 'container'
+                              ? 'border-primary text-primary'
+                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                          }`}
+                        >
+                          <Terminal className="h-4 w-4 inline mr-2" />
+                          Container Logs
+                        </button>
+                      )}
                     </nav>
                   </div>
 
@@ -606,24 +648,6 @@ export default function WorkloadDetailPage() {
                       </span>
                     </div>
                   </div>
-                  {workload.description && (
-                    <div>
-                      <label className="text-sm text-muted-foreground">Description</label>
-                      <p className="text-sm text-card-foreground mt-1">{workload.description}</p>
-                    </div>
-                  )}
-                  {workload.tags && workload.tags.length > 0 && (
-                    <div>
-                      <label className="text-sm text-muted-foreground">Tags</label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {workload.tags.map((tag, index) => (
-                          <Badge key={index} variant="neutral">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>

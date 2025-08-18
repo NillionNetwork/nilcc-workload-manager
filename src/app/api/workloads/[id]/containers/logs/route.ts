@@ -13,7 +13,7 @@ export async function POST(
 
   const apiKey = authorization.replace('Bearer ', '');
   const apiBaseUrl = request.headers.get('x-api-base-url') || DEFAULT_NILCC_API_BASE;
-  const { id } = await params;
+  await params;
   const body = await request.json();
 
   try {

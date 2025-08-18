@@ -63,7 +63,7 @@ export async function DELETE(
         'x-api-key': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ workloadId: id }),
     });
 
     if (!response.ok) {

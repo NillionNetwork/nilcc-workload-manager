@@ -18,7 +18,6 @@ export default function CreateWorkloadPage() {
 
   // Form state
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [imageType, setImageType] = useState<'public' | 'private'>('public');
   
   // Public image fields
@@ -167,7 +166,6 @@ export default function CreateWorkloadPage() {
 
       const baseData = {
         name,
-        description: description || undefined,
         memory: parseInt(memory),
         cpus: parseInt(cpus),
         disk: parseInt(disk),
@@ -190,7 +188,7 @@ export default function CreateWorkloadPage() {
           };
 
       const response = await client.createWorkload(workloadData as CreateWorkloadRequest);
-      router.push(`/workloads/${response.id}`);
+      router.push(`/workloads/${response.workloadId}`);
     } catch (err) {
       if (err instanceof Error) {
         const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
@@ -265,15 +263,6 @@ export default function CreateWorkloadPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="my-secure-app"
                   required
-                />
-              </div>
-              <div>
-                <label className={components.label}>Description (optional)</label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Brief description of your workload..."
-                  rows={2}
                 />
               </div>
             </div>

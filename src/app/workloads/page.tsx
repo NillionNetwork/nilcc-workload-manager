@@ -146,7 +146,7 @@ export default function WorkloadsPage() {
       {!loading && !error && workloads.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workloads.map((workload) => (
-            <Card key={workload.id} className="hover:shadow-md transition-shadow">
+            <Card key={workload.workloadId} className="hover:shadow-md transition-shadow">
               <CardContent>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 min-w-0">
@@ -154,7 +154,7 @@ export default function WorkloadsPage() {
                       {workload.name}
                     </h3>
                     <p className="text-sm text-muted-foreground truncate">
-                      {workload.id}
+                      {workload.workloadId}
                     </p>
                   </div>
                   <Badge variant={getStatusVariant(workload.status)}>
@@ -170,7 +170,7 @@ export default function WorkloadsPage() {
                 </div>
 
                 <div className="flex items-center justify-between space-x-2">
-                  <Link href={`/workloads/${workload.id}`} className="flex-1">
+                  <Link href={`/workloads/${workload.workloadId}`} className="flex-1">
                     <Button variant="secondary" className="w-full">
                       <Eye className="h-4 w-4 mr-2" />
                       View Details

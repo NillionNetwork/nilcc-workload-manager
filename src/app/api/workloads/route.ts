@@ -57,8 +57,6 @@ export async function POST(request: NextRequest) {
     cpus: number;
     disk: number;
     gpus: number;
-    description?: string;
-    tags?: string[];
     envVars?: Record<string, string>;
     files?: Record<string, string>;
     dockerCompose?: string;
@@ -72,8 +70,6 @@ export async function POST(request: NextRequest) {
     cpus: body.cpus,
     disk: body.disk,
     gpus: body.gpus,
-    description: body.description,
-    tags: body.tags,
     envVars: body.envVars,
     files: body.files,
   };

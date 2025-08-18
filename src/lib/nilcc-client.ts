@@ -3,7 +3,6 @@ import {
   CreateWorkloadRequest, 
   WorkloadResponse,
   Container,
-  ListContainersRequest,
   WorkloadContainerLogsRequest,
   WorkloadSystemLogsRequest,
   LogsResponse
@@ -64,7 +63,7 @@ export class NilccClient {
   async listContainers(workloadId: string): Promise<Container[]> {
     const response: AxiosResponse<Container[]> = await axios.post(
       `${this.baseUrl}/workloads/${workloadId}/containers`,
-      { id: workloadId },
+      { workloadId: workloadId },
       { headers: this.headers }
     );
 
@@ -73,7 +72,7 @@ export class NilccClient {
 
   async getContainerLogs(request: WorkloadContainerLogsRequest): Promise<LogsResponse> {
     const response: AxiosResponse<LogsResponse> = await axios.post(
-      `${this.baseUrl}/workloads/${request.id}/containers/logs`,
+      `${this.baseUrl}/workloads/${request.workloadId}/containers/logs`,
       request,
       { headers: this.headers }
     );
@@ -83,7 +82,7 @@ export class NilccClient {
 
   async getSystemLogs(request: WorkloadSystemLogsRequest): Promise<LogsResponse> {
     const response: AxiosResponse<LogsResponse> = await axios.post(
-      `${this.baseUrl}/workloads/${request.id}/logs`,
+      `${this.baseUrl}/workloads/${request.workloadId}/logs`,
       request,
       { headers: this.headers }
     );
