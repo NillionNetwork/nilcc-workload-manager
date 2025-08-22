@@ -1,12 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { useSettings } from '@/contexts/SettingsContext';
-import { Card, CardContent, Button, Badge, Alert } from '@/components/ui';
-import { components } from '@/styles/design-system';
-import { WorkloadResponse } from '@/lib/nilcc-types';
-import { Layers, Plus, ExternalLink, RefreshCw, Settings, Eye } from 'lucide-react';
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useSettings } from "@/contexts/SettingsContext";
+import { Card, CardContent, Button, Badge, Alert } from "@/components/ui";
+import { components } from "@/styles/design-system";
+import { WorkloadResponse } from "@/lib/nilcc-types";
+import {
+  Layers,
+  Plus,
+  ExternalLink,
+  RefreshCw,
+  Settings,
+  Eye,
+} from "lucide-react";
 
 export default function WorkloadsPage() {
   const { client, apiKey } = useSettings();
@@ -16,7 +23,7 @@ export default function WorkloadsPage() {
 
   const fetchWorkloads = useCallback(async () => {
     if (!client) return;
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -24,10 +31,16 @@ export default function WorkloadsPage() {
       setWorkloads(data);
     } catch (err) {
       if (err instanceof Error) {
-        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
-        setError(errorWithResponse.response?.data?.errors?.[0] || err.message || 'Failed to fetch workloads');
+        const errorWithResponse = err as Error & {
+          response?: { data?: { errors?: string[] } };
+        };
+        setError(
+          errorWithResponse.response?.data?.errors?.[0] ||
+            err.message ||
+            "Failed to fetch workloads"
+        );
       } else {
-        setError('Failed to fetch workloads');
+        setError("Failed to fetch workloads");
       }
     } finally {
       setLoading(false);
@@ -44,10 +57,15 @@ export default function WorkloadsPage() {
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'running': return 'success';
-      case 'starting': case 'scheduled': return 'warning';
-      case 'error': return 'danger';
-      default: return 'neutral';
+      case "running":
+        return "success";
+      case "starting":
+      case "scheduled":
+        return "warning";
+      case "error":
+        return "danger";
+      default:
+        return "neutral";
     }
   };
 
@@ -59,9 +77,13 @@ export default function WorkloadsPage() {
           <div>
             <p className="font-medium">API Key Required</p>
             <p className="text-sm mt-1">
-              You need to set your API key in settings before you can view workloads.
+              You need to set your API key in settings before you can view
+              workloads.
             </p>
-            <Link href="/settings" className="text-sm underline mt-1 inline-block">
+            <Link
+              href="/settings"
+              className="text-sm underline mt-1 inline-block"
+            >
               Go to Settings
             </Link>
           </div>
@@ -115,7 +137,9 @@ export default function WorkloadsPage() {
           <CardContent>
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mr-3" />
-              <span className="text-muted-foreground">Loading workloads...</span>
+              <span className="text-muted-foreground">
+                Loading workloads...
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -127,7 +151,9 @@ export default function WorkloadsPage() {
           <CardContent>
             <div className="text-center py-12">
               <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-card-foreground mb-2">No workloads found</h3>
+              <h3 className="text-lg font-medium text-card-foreground mb-2">
+                No workloads found
+              </h3>
               <p className="text-muted-foreground mb-6">
                 Get started by creating your first secure workload
               </p>
@@ -146,13 +172,16 @@ export default function WorkloadsPage() {
       {!loading && !error && workloads.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workloads.map((workload) => (
-            <Card key={workload.workloadId} className="hover:shadow-md transition-shadow">
+            <Card
+              key={workload.workloadId}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardContent>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-card-foreground truncate">
+                    <h4 className="font-semibold text-card-foreground truncate">
                       {workload.name}
-                    </h3>
+                    </h4>
                     <p className="text-sm text-muted-foreground truncate">
                       {workload.workloadId}
                     </p>
@@ -164,30 +193,18 @@ export default function WorkloadsPage() {
 
                 <div className="space-y-2 text-sm text-muted-foreground mb-4">
                   <p>
-                    <span className="font-medium">Created:</span>{' '}
+                    <span className="font-medium">Created:</span>{" "}
                     {new Date(workload.createdAt).toLocaleDateString()}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between space-x-2">
-                  <Link href={`/workloads/${workload.workloadId}`} className="flex-1">
-                    <Button variant="secondary" className="w-full">
+                <div className="flex items-center justify-end space-x-2">
+                  <Link href={`/workloads/${workload.workloadId}`}>
+                    <Button variant="secondary">
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
                   </Link>
-                  
-                  {workload.domain && workload.status === 'running' && (
-                    <a
-                      href={`https://${workload.domain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button variant="ghost" size="sm">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </a>
-                  )}
                 </div>
               </CardContent>
             </Card>

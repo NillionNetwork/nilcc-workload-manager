@@ -10,7 +10,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, disabled, children, type = 'submit', ...props }, ref) => {
     const variantClasses = {
       primary: '',
-      secondary: 'nillion-button-secondary',
+      secondary: '', // Secondary buttons just use type="button" styling
       danger: '',
       ghost: 'nillion-button-ghost',
       outline: 'nillion-button-outline',

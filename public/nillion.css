@@ -209,6 +209,27 @@ button[type="button"]:active:not(:disabled) {
   border-color: var(--nillion-grey-dark);
 }
 
+/* Dark mode secondary buttons - outline style */
+.dark button[type="button"],
+[data-theme="dark"] button[type="button"] {
+  background-color: transparent;
+  color: var(--nillion-primary);
+  border: 2px solid var(--nillion-primary);
+}
+
+.dark button[type="button"]:hover:not(:disabled),
+[data-theme="dark"] button[type="button"]:hover:not(:disabled) {
+  background-color: var(--nillion-primary);
+  color: white;
+  border-color: var(--nillion-primary);
+}
+
+.dark button[type="button"]:active:not(:disabled),
+[data-theme="dark"] button[type="button"]:active:not(:disabled) {
+  background-color: var(--nillion-primary-active);
+  border-color: var(--nillion-primary-active);
+}
+
 /* Auto-style links */
 a {
   color: var(--nillion-primary);

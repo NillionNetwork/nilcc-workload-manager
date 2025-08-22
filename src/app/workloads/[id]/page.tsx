@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useSettings } from '@/contexts/SettingsContext';
-import { Card, CardContent, Button, Badge, Alert } from '@/components/ui';
-import { components } from '@/styles/design-system';
-import { WorkloadResponse, Container } from '@/lib/nilcc-types';
-import { 
-  ExternalLink, 
-  Trash2, 
-  RefreshCw, 
-  Settings, 
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSettings } from "@/contexts/SettingsContext";
+import { Card, CardContent, Button, Badge, Alert } from "@/components/ui";
+import { components } from "@/styles/design-system";
+import { WorkloadResponse, Container } from "@/lib/nilcc-types";
+import {
+  ExternalLink,
+  Trash2,
+  RefreshCw,
+  Settings,
   Calendar,
   Cpu,
   HardDrive,
@@ -20,8 +20,8 @@ import {
   FileText,
   Terminal,
   Copy,
-  Check
-} from 'lucide-react';
+  Check,
+} from "lucide-react";
 
 export default function WorkloadDetailPage() {
   const { id } = useParams();
@@ -31,79 +31,100 @@ export default function WorkloadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
+
   // Logs state
   const [containers, setContainers] = useState<Container[]>([]);
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const [containerLogs, setContainerLogs] = useState<Record<string, Record<'stdout' | 'stderr', string[]>>>({});
-  const [selectedContainer, setSelectedContainer] = useState<string>('');
-  const [activeLogsTab, setActiveLogsTab] = useState<'system' | 'container'>('system');
-  const [activeStreamTab, setActiveStreamTab] = useState<'stdout' | 'stderr'>('stderr');
+  const [containerLogs, setContainerLogs] = useState<
+    Record<string, Record<"stdout" | "stderr", string[]>>
+  >({});
+  const [selectedContainer, setSelectedContainer] = useState<string>("");
+  const [activeLogsTab, setActiveLogsTab] = useState<"system" | "container">(
+    "system"
+  );
+  const [activeStreamTab, setActiveStreamTab] = useState<"stdout" | "stderr">(
+    "stderr"
+  );
   const [systemLogsLoading, setSystemLogsLoading] = useState(false);
-  const [containerLogsLoading, setContainerLogsLoading] = useState<Record<'stdout' | 'stderr', boolean>>({ stdout: false, stderr: false });
+  const [containerLogsLoading, setContainerLogsLoading] = useState<
+    Record<"stdout" | "stderr", boolean>
+  >({ stdout: false, stderr: false });
   const [logsError, setLogsError] = useState<string | null>(null);
   const [tailLogs, setTailLogs] = useState(true);
   const [copiedCompose, setCopiedCompose] = useState(false);
-  
+
   // Ref for auto-scrolling logs
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     if (logsContainerRef.current) {
-      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+      logsContainerRef.current.scrollTop =
+        logsContainerRef.current.scrollHeight;
     }
   }, []);
 
-  const fetchWorkload = useCallback(async (showLoader = true) => {
-    if (!client || !id) return;
-    
-    try {
-      if (showLoader) {
-        setLoading(true);
+  const fetchWorkload = useCallback(
+    async (showLoader = true) => {
+      if (!client || !id) return;
+
+      try {
+        if (showLoader) {
+          setLoading(true);
+        }
+        setError(null);
+        const data = await client.getWorkload(id as string);
+        setWorkload(data);
+      } catch (err) {
+        if (err instanceof Error) {
+          const errorWithResponse = err as Error & {
+            response?: { data?: { errors?: string[] } };
+          };
+          setError(
+            errorWithResponse.response?.data?.errors?.[0] ||
+              err.message ||
+              "Failed to fetch workload details"
+          );
+        } else {
+          setError("Failed to fetch workload details");
+        }
+      } finally {
+        if (showLoader) {
+          setLoading(false);
+        }
       }
-      setError(null);
-      const data = await client.getWorkload(id as string);
-      setWorkload(data);
-    } catch (err) {
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
-        setError(errorWithResponse.response?.data?.errors?.[0] || err.message || 'Failed to fetch workload details');
-      } else {
-        setError('Failed to fetch workload details');
-      }
-    } finally {
-      if (showLoader) {
-        setLoading(false);
-      }
-    }
-  }, [client, id]);
+    },
+    [client, id]
+  );
 
   const fetchContainers = useCallback(async () => {
     if (!client || !id) return;
-    
+
     try {
       const containerList = await client.listContainers(id as string);
       setContainers(containerList);
       if (containerList.length > 0 && !selectedContainer) {
         const firstContainer = containerList[0];
-        const containerName = (firstContainer.names && firstContainer.names[0]) || firstContainer.name || `container-${0}`;
+        const containerName =
+          (firstContainer.names && firstContainer.names[0]) ||
+          firstContainer.name ||
+          `container-${0}`;
         setSelectedContainer(containerName);
       }
     } catch (err) {
-      console.error('Failed to fetch containers:', err);
+      console.error("Failed to fetch containers:", err);
     }
   }, [client, id, selectedContainer]);
 
   const fetchSystemLogs = useCallback(async () => {
     if (!client || !id) return;
-    
+
     try {
       setSystemLogsLoading(true);
       setLogsError(null);
       const response = await client.getSystemLogs({
         workloadId: id as string,
         tail: tailLogs,
-        maxLines: 100
+        maxLines: 100,
       });
       setSystemLogs(response.lines);
       // Auto-scroll to bottom after a brief delay to ensure DOM is updated
@@ -112,53 +133,62 @@ export default function WorkloadDetailPage() {
       if (err instanceof Error) {
         setLogsError(err.message);
       } else {
-        setLogsError('Failed to fetch system logs');
+        setLogsError("Failed to fetch system logs");
       }
     } finally {
       setSystemLogsLoading(false);
     }
   }, [client, id, tailLogs, scrollToBottom]);
 
-  const fetchContainerLogs = useCallback(async (containerName: string, stream: 'stdout' | 'stderr') => {
-    if (!client || !id) return;
-    
-    try {
-      setContainerLogsLoading(prev => ({ ...prev, [stream]: true }));
-      setLogsError(null);
-      const response = await client.getContainerLogs({
-        workloadId: id as string,
-        container: containerName,
-        tail: tailLogs,
-        stream: stream,
-        maxLines: 100
-      });
-      setContainerLogs(prev => ({
-        ...prev,
-        [containerName]: {
-          ...prev[containerName],
-          [stream]: response.lines
+  const fetchContainerLogs = useCallback(
+    async (containerName: string, stream: "stdout" | "stderr") => {
+      if (!client || !id) return;
+
+      try {
+        setContainerLogsLoading((prev) => ({ ...prev, [stream]: true }));
+        setLogsError(null);
+        const response = await client.getContainerLogs({
+          workloadId: id as string,
+          container: containerName,
+          tail: tailLogs,
+          stream: stream,
+          maxLines: 100,
+        });
+        setContainerLogs((prev) => ({
+          ...prev,
+          [containerName]: {
+            ...prev[containerName],
+            [stream]: response.lines,
+          },
+        }));
+        // Auto-scroll to bottom after a brief delay to ensure DOM is updated
+        setTimeout(scrollToBottom, 100);
+      } catch (err) {
+        if (err instanceof Error) {
+          setLogsError(err.message);
+        } else {
+          setLogsError("Failed to fetch container logs");
         }
-      }));
-      // Auto-scroll to bottom after a brief delay to ensure DOM is updated
-      setTimeout(scrollToBottom, 100);
-    } catch (err) {
-      if (err instanceof Error) {
-        setLogsError(err.message);
-      } else {
-        setLogsError('Failed to fetch container logs');
+      } finally {
+        setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
       }
-    } finally {
-      setContainerLogsLoading(prev => ({ ...prev, [stream]: false }));
-    }
-  }, [client, id, tailLogs, scrollToBottom]);
+    },
+    [client, id, tailLogs, scrollToBottom]
+  );
 
   const refreshLogs = useCallback(() => {
-    if (activeLogsTab === 'system') {
+    if (activeLogsTab === "system") {
       fetchSystemLogs();
     } else if (selectedContainer) {
       fetchContainerLogs(selectedContainer, activeStreamTab);
     }
-  }, [activeLogsTab, selectedContainer, activeStreamTab, fetchSystemLogs, fetchContainerLogs]);
+  }, [
+    activeLogsTab,
+    selectedContainer,
+    activeStreamTab,
+    fetchSystemLogs,
+    fetchContainerLogs,
+  ]);
 
   useEffect(() => {
     if (client && id) {
@@ -177,24 +207,38 @@ export default function WorkloadDetailPage() {
 
   // Fetch containers only when workload is running
   useEffect(() => {
-    if (workload && workload.status === 'running' && client && id) {
+    if (workload && workload.status === "running" && client && id) {
       fetchContainers();
     }
   }, [workload, client, id, fetchContainers]);
 
   // Switch to system logs tab when workload is not running
   useEffect(() => {
-    if (workload && workload.status !== 'running' && activeLogsTab === 'container') {
-      setActiveLogsTab('system');
+    if (
+      workload &&
+      workload.status !== "running" &&
+      activeLogsTab === "container"
+    ) {
+      setActiveLogsTab("system");
     }
   }, [workload, activeLogsTab]);
 
   // Fetch container logs when selected container or stream changes
   useEffect(() => {
-    if (selectedContainer && activeLogsTab === 'container' && workload?.status === 'running') {
+    if (
+      selectedContainer &&
+      activeLogsTab === "container" &&
+      workload?.status === "running"
+    ) {
       fetchContainerLogs(selectedContainer, activeStreamTab);
     }
-  }, [selectedContainer, activeLogsTab, activeStreamTab, workload?.status, fetchContainerLogs]);
+  }, [
+    selectedContainer,
+    activeLogsTab,
+    activeStreamTab,
+    workload?.status,
+    fetchContainerLogs,
+  ]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -208,18 +252,29 @@ export default function WorkloadDetailPage() {
   }, [client, id, fetchWorkload]);
 
   const handleDelete = async () => {
-    if (!client || !workload || !confirm(`Are you sure you want to delete "${workload.name}"?`)) return;
+    if (
+      !client ||
+      !workload ||
+      !confirm(`Are you sure you want to delete "${workload.name}"?`)
+    )
+      return;
 
     try {
       setDeleting(true);
       await client.deleteWorkload(workload.workloadId);
-      router.push('/workloads');
+      router.push("/workloads");
     } catch (err) {
       if (err instanceof Error) {
-        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
-        alert(`Failed to delete workload: ${errorWithResponse.response?.data?.errors?.[0] || err.message}`);
+        const errorWithResponse = err as Error & {
+          response?: { data?: { errors?: string[] } };
+        };
+        alert(
+          `Failed to delete workload: ${
+            errorWithResponse.response?.data?.errors?.[0] || err.message
+          }`
+        );
       } else {
-        alert('Failed to delete workload');
+        alert("Failed to delete workload");
       }
       setDeleting(false);
     }
@@ -227,10 +282,15 @@ export default function WorkloadDetailPage() {
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'running': return 'success';
-      case 'starting': case 'scheduled': return 'warning';
-      case 'error': return 'danger';
-      default: return 'neutral';
+      case "running":
+        return "success";
+      case "starting":
+      case "scheduled":
+        return "warning";
+      case "error":
+        return "danger";
+      default:
+        return "neutral";
     }
   };
 
@@ -242,9 +302,13 @@ export default function WorkloadDetailPage() {
           <div>
             <p className="font-medium">API Key Required</p>
             <p className="text-sm mt-1">
-              You need to set your API key in settings before you can view workload details.
+              You need to set your API key in settings before you can view
+              workload details.
             </p>
-            <Link href="/settings" className="text-sm underline mt-1 inline-block">
+            <Link
+              href="/settings"
+              className="text-sm underline mt-1 inline-block"
+            >
               Go to Settings
             </Link>
           </div>
@@ -260,14 +324,16 @@ export default function WorkloadDetailPage() {
         <div className="flex items-center">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {workload?.name || 'Workload Details'}
+              {workload?.name || "Workload Details"}
             </h1>
             {workload && (
-              <p className="text-muted-foreground font-mono text-sm">{workload.workloadId}</p>
+              <p className="text-muted-foreground font-mono text-sm">
+                {workload.workloadId}
+              </p>
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <Button
             variant="secondary"
@@ -278,11 +344,7 @@ export default function WorkloadDetailPage() {
             Refresh
           </Button>
           {workload && (
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-              loading={deleting}
-            >
+            <Button variant="danger" onClick={handleDelete} loading={deleting}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
@@ -304,7 +366,9 @@ export default function WorkloadDetailPage() {
           <CardContent>
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground mr-3" />
-              <span className="text-muted-foreground">Loading workload details...</span>
+              <span className="text-muted-foreground">
+                Loading workload details...
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -319,21 +383,25 @@ export default function WorkloadDetailPage() {
             <Card>
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-card-foreground">Status & Access</h2>
+                  <h3 className="text-lg font-semibold text-card-foreground">
+                    Status & Access
+                  </h3>
                   <Badge variant={getStatusVariant(workload.status)}>
                     {workload.status}
                   </Badge>
                 </div>
-                
+
                 {workload.domain && (
                   <div className="space-y-3">
                     <div>
-                      <label className={components.label}>Application URL</label>
+                      <label className={components.label}>
+                        Application URL
+                      </label>
                       <div className="flex items-center space-x-2">
                         <code className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm text-foreground">
                           https://{workload.domain}
                         </code>
-                        {workload.status === 'running' && (
+                        {workload.status === "running" && (
                           <a
                             href={`https://${workload.domain}`}
                             target="_blank"
@@ -350,14 +418,15 @@ export default function WorkloadDetailPage() {
                   </div>
                 )}
 
-                {workload.status === 'starting' && (
+                {workload.status === "starting" && (
                   <Alert variant="info" className="mt-4">
                     <div className="flex items-start">
                       <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="font-medium">Deployment in Progress</p>
                         <p className="text-sm mt-1">
-                          Your workload is being deployed to nilCC. This typically takes 3-6 minutes.
+                          Your workload is being deployed to nilCC. This
+                          typically takes 3-6 minutes.
                         </p>
                       </div>
                     </div>
@@ -369,7 +438,9 @@ export default function WorkloadDetailPage() {
             {/* Docker Configuration */}
             <Card>
               <CardContent>
-                <h2 className="text-lg font-semibold text-card-foreground mb-4">Docker Configuration</h2>
+                <h3 className="text-lg font-semibold text-card-foreground mb-4">
+                  Docker Configuration
+                </h3>
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className={components.label}>Docker Compose</label>
@@ -407,7 +478,9 @@ export default function WorkloadDetailPage() {
             {workload.envVars && Object.keys(workload.envVars).length > 0 && (
               <Card>
                 <CardContent>
-                  <h2 className="text-lg font-semibold text-card-foreground mb-4">Environment Variables</h2>
+                  <h3 className="text-lg font-semibold text-card-foreground mb-4">
+                    Environment Variables
+                  </h3>
                   <div className="space-y-2">
                     {Object.entries(workload.envVars).map(([key, value]) => (
                       <div key={key} className="flex items-center space-x-2">
@@ -426,26 +499,47 @@ export default function WorkloadDetailPage() {
             )}
 
             {/* Logs Section */}
-            {(workload.status === 'running' || workload.status === 'starting' || workload.status === 'scheduled') && (
+            {(workload.status === "running" ||
+              workload.status === "starting" ||
+              workload.status === "scheduled") && (
               <Card>
                 <CardContent>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-card-foreground">Logs</h2>
-                    <div className="flex items-center space-x-2">
-                      <label className="flex items-center space-x-2 text-sm">
+                    <h3 className="text-lg font-semibold text-card-foreground">
+                      Logs
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          fontSize: "0.875rem",
+                          margin: 0,
+                          marginRight: "0.5rem",
+                        }}
+                      >
                         <input
                           type="checkbox"
                           checked={tailLogs}
                           onChange={(e) => setTailLogs(e.target.checked)}
-                          className="rounded border-border"
+                          style={{ margin: 0 }}
                         />
-                        <span className="text-muted-foreground">Tail logs</span>
+                        <span
+                          style={{ color: "var(--nillion-text-secondary)" }}
+                        >
+                          Tail logs
+                        </span>
                       </label>
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={refreshLogs}
-                        loading={activeLogsTab === 'system' ? systemLogsLoading : containerLogsLoading[activeStreamTab]}
+                        loading={
+                          activeLogsTab === "system"
+                            ? systemLogsLoading
+                            : containerLogsLoading[activeStreamTab]
+                        }
                       >
                         <RefreshCw className="h-4 w-4 mr-1" />
                         Refresh
@@ -454,49 +548,72 @@ export default function WorkloadDetailPage() {
                   </div>
 
                   {/* Logs Tabs */}
-                  <div style={{ borderBottom: '2px solid var(--nillion-border)', marginBottom: '1rem' }}>
-                    <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
+                  <div
+                    style={{
+                      borderBottom: "2px solid var(--nillion-border)",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <nav style={{ display: "flex", margin: "0 -0.25rem" }}>
                       <button
-                        onClick={() => setActiveLogsTab('system')}
+                        onClick={() => setActiveLogsTab("system")}
                         style={{
-                          padding: '0.75rem 1.5rem',
-                          marginBottom: '-2px',
-                          border: 'none',
-                          borderBottom: activeLogsTab === 'system' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
-                          backgroundColor: activeLogsTab === 'system' ? 'var(--nillion-bg)' : 'transparent',
-                          color: activeLogsTab === 'system' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
-                          fontWeight: '600',
-                          fontSize: '0.875rem',
-                          cursor: 'pointer',
-                          transition: 'all 200ms ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem'
+                          padding: "0.75rem 1.5rem",
+                          marginBottom: "-2px",
+                          border: "none",
+                          borderBottom:
+                            activeLogsTab === "system"
+                              ? "2px solid var(--nillion-primary)"
+                              : "2px solid transparent",
+                          backgroundColor:
+                            activeLogsTab === "system"
+                              ? "var(--nillion-bg)"
+                              : "transparent",
+                          color:
+                            activeLogsTab === "system"
+                              ? "var(--nillion-primary)"
+                              : "var(--nillion-text-secondary)",
+                          fontWeight: "600",
+                          fontSize: "0.875rem",
+                          cursor: "pointer",
+                          transition: "all 200ms ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
                         }}
                       >
-                        <FileText style={{ height: '1rem', width: '1rem' }} />
+                        <FileText style={{ height: "1rem", width: "1rem" }} />
                         System Logs
                       </button>
-                      {workload.status === 'running' && (
+                      {workload.status === "running" && (
                         <button
-                          onClick={() => setActiveLogsTab('container')}
+                          onClick={() => setActiveLogsTab("container")}
                           style={{
-                            padding: '0.75rem 1.5rem',
-                            marginBottom: '-2px',
-                            border: 'none',
-                            borderBottom: activeLogsTab === 'container' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
-                            backgroundColor: activeLogsTab === 'container' ? 'var(--nillion-bg)' : 'transparent',
-                            color: activeLogsTab === 'container' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
-                            fontWeight: '600',
-                            fontSize: '0.875rem',
-                            cursor: 'pointer',
-                            transition: 'all 200ms ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
+                            padding: "0.75rem 1.5rem",
+                            marginBottom: "-2px",
+                            border: "none",
+                            borderBottom:
+                              activeLogsTab === "container"
+                                ? "2px solid var(--nillion-primary)"
+                                : "2px solid transparent",
+                            backgroundColor:
+                              activeLogsTab === "container"
+                                ? "var(--nillion-bg)"
+                                : "transparent",
+                            color:
+                              activeLogsTab === "container"
+                                ? "var(--nillion-primary)"
+                                : "var(--nillion-text-secondary)",
+                            fontWeight: "600",
+                            fontSize: "0.875rem",
+                            cursor: "pointer",
+                            transition: "all 200ms ease",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
                           }}
                         >
-                          <Terminal style={{ height: '1rem', width: '1rem' }} />
+                          <Terminal style={{ height: "1rem", width: "1rem" }} />
                           Container Logs
                         </button>
                       )}
@@ -504,7 +621,7 @@ export default function WorkloadDetailPage() {
                   </div>
 
                   {/* Container Selection */}
-                  {activeLogsTab === 'container' && containers.length > 0 && (
+                  {activeLogsTab === "container" && containers.length > 0 && (
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-muted-foreground mb-2">
                         Select Container
@@ -515,11 +632,22 @@ export default function WorkloadDetailPage() {
                         className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                       >
                         {containers.map((container, index) => {
-                          const containerName = (container.names && container.names[0]) || container.name || `container-${index}`;
-                          const displayName = (container.names && container.names[0]) || container.name || `Container ${index + 1}`;
+                          const containerName =
+                            (container.names && container.names[0]) ||
+                            container.name ||
+                            `container-${index}`;
+                          const displayName =
+                            (container.names && container.names[0]) ||
+                            container.name ||
+                            `Container ${index + 1}`;
                           return (
-                            <option key={`${containerName}-${index}`} value={containerName}>
-                              {displayName} ({container.state || container.status || 'Unknown'})
+                            <option
+                              key={`${containerName}-${index}`}
+                              value={containerName}
+                            >
+                              {displayName} (
+                              {container.state || container.status || "Unknown"}
+                              )
                             </option>
                           );
                         })}
@@ -528,41 +656,64 @@ export default function WorkloadDetailPage() {
                   )}
 
                   {/* Stream Tabs for Container Logs */}
-                  {activeLogsTab === 'container' && (
-                    <div style={{ borderBottom: '2px solid var(--nillion-border)', marginBottom: '1rem' }}>
-                      <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
+                  {activeLogsTab === "container" && (
+                    <div
+                      style={{
+                        borderBottom: "2px solid var(--nillion-border)",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      <nav style={{ display: "flex", margin: "0 -0.25rem" }}>
                         <button
-                          onClick={() => setActiveStreamTab('stderr')}
+                          onClick={() => setActiveStreamTab("stderr")}
                           style={{
-                            padding: '0.5rem 1rem',
-                            marginBottom: '-2px',
-                            border: 'none',
-                            borderBottom: activeStreamTab === 'stderr' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
-                            backgroundColor: activeStreamTab === 'stderr' ? 'var(--nillion-bg)' : 'transparent',
-                            color: activeStreamTab === 'stderr' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
-                            fontWeight: '600',
-                            fontSize: '0.875rem',
-                            cursor: 'pointer',
-                            transition: 'all 200ms ease',
-                            fontFamily: 'monospace'
+                            padding: "0.5rem 1rem",
+                            marginBottom: "-2px",
+                            border: "none",
+                            borderBottom:
+                              activeStreamTab === "stderr"
+                                ? "2px solid var(--nillion-primary)"
+                                : "2px solid transparent",
+                            backgroundColor:
+                              activeStreamTab === "stderr"
+                                ? "var(--nillion-bg)"
+                                : "transparent",
+                            color:
+                              activeStreamTab === "stderr"
+                                ? "var(--nillion-primary)"
+                                : "var(--nillion-text-secondary)",
+                            fontWeight: "600",
+                            fontSize: "0.875rem",
+                            cursor: "pointer",
+                            transition: "all 200ms ease",
+                            fontFamily: "monospace",
                           }}
                         >
                           stderr
                         </button>
                         <button
-                          onClick={() => setActiveStreamTab('stdout')}
+                          onClick={() => setActiveStreamTab("stdout")}
                           style={{
-                            padding: '0.5rem 1rem',
-                            marginBottom: '-2px',
-                            border: 'none',
-                            borderBottom: activeStreamTab === 'stdout' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
-                            backgroundColor: activeStreamTab === 'stdout' ? 'var(--nillion-bg)' : 'transparent',
-                            color: activeStreamTab === 'stdout' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
-                            fontWeight: '600',
-                            fontSize: '0.875rem',
-                            cursor: 'pointer',
-                            transition: 'all 200ms ease',
-                            fontFamily: 'monospace'
+                            padding: "0.5rem 1rem",
+                            marginBottom: "-2px",
+                            border: "none",
+                            borderBottom:
+                              activeStreamTab === "stdout"
+                                ? "2px solid var(--nillion-primary)"
+                                : "2px solid transparent",
+                            backgroundColor:
+                              activeStreamTab === "stdout"
+                                ? "var(--nillion-bg)"
+                                : "transparent",
+                            color:
+                              activeStreamTab === "stdout"
+                                ? "var(--nillion-primary)"
+                                : "var(--nillion-text-secondary)",
+                            fontWeight: "600",
+                            fontSize: "0.875rem",
+                            cursor: "pointer",
+                            transition: "all 200ms ease",
+                            fontFamily: "monospace",
                           }}
                         >
                           stdout
@@ -572,46 +723,63 @@ export default function WorkloadDetailPage() {
                   )}
 
                   {/* Logs Display */}
-                  <div 
+                  <div
                     ref={logsContainerRef}
                     className="bg-muted rounded-lg p-4 h-96 overflow-auto font-mono text-sm"
                   >
                     {logsError ? (
-                      <div className="text-destructive">
-                        Error: {logsError}
-                      </div>
-                    ) : (activeLogsTab === 'system' && systemLogsLoading) || (activeLogsTab === 'container' && containerLogsLoading[activeStreamTab]) ? (
+                      <div className="text-destructive">Error: {logsError}</div>
+                    ) : (activeLogsTab === "system" && systemLogsLoading) ||
+                      (activeLogsTab === "container" &&
+                        containerLogsLoading[activeStreamTab]) ? (
                       <div className="text-muted-foreground flex items-center">
                         <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                         Loading logs...
                       </div>
-                    ) : activeLogsTab === 'system' ? (
+                    ) : activeLogsTab === "system" ? (
                       systemLogs.length > 0 ? (
                         <div className="space-y-1">
                           {systemLogs.map((line, index) => (
-                            <div key={index} className="text-foreground whitespace-pre-wrap break-words">
+                            <div
+                              key={index}
+                              className="text-foreground whitespace-pre-wrap break-words"
+                            >
                               {line}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-muted-foreground">No system logs available</div>
+                        <div className="text-muted-foreground">
+                          No system logs available
+                        </div>
                       )
-                    ) : selectedContainer && containerLogs[selectedContainer] && containerLogs[selectedContainer][activeStreamTab] ? (
-                      containerLogs[selectedContainer][activeStreamTab].length > 0 ? (
+                    ) : selectedContainer &&
+                      containerLogs[selectedContainer] &&
+                      containerLogs[selectedContainer][activeStreamTab] ? (
+                      containerLogs[selectedContainer][activeStreamTab].length >
+                      0 ? (
                         <div className="space-y-1">
-                          {containerLogs[selectedContainer][activeStreamTab].map((line, index) => (
-                            <div key={index} className="text-foreground whitespace-pre-wrap break-words">
+                          {containerLogs[selectedContainer][
+                            activeStreamTab
+                          ].map((line, index) => (
+                            <div
+                              key={index}
+                              className="text-foreground whitespace-pre-wrap break-words"
+                            >
                               {line}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-muted-foreground">No {activeStreamTab} logs available</div>
+                        <div className="text-muted-foreground">
+                          No {activeStreamTab} logs available
+                        </div>
                       )
                     ) : (
                       <div className="text-muted-foreground">
-                        {selectedContainer ? `No ${activeStreamTab} logs available` : 'Select a container to view logs'}
+                        {selectedContainer
+                          ? `No ${activeStreamTab} logs available`
+                          : "Select a container to view logs"}
                       </div>
                     )}
                   </div>
@@ -625,11 +793,15 @@ export default function WorkloadDetailPage() {
             {/* Resource Allocation */}
             <Card>
               <CardContent>
-                <h2 className="text-lg font-semibold text-card-foreground mb-4">Resources</h2>
+                <h3 className="text-lg font-semibold text-card-foreground mb-4">
+                  Resources
+                </h3>
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <MemoryStick className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm text-muted-foreground">Memory:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Memory:
+                    </span>
                     <span className="text-sm font-medium text-card-foreground ml-auto">
                       {workload.memory} MB
                     </span>
@@ -643,7 +815,9 @@ export default function WorkloadDetailPage() {
                   </div>
                   <div className="flex items-center">
                     <HardDrive className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm text-muted-foreground">Storage:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Storage:
+                    </span>
                     <span className="text-sm font-medium text-card-foreground ml-auto">
                       {workload.disk} GB
                     </span>
@@ -651,7 +825,9 @@ export default function WorkloadDetailPage() {
                   {workload.gpus > 0 && (
                     <div className="flex items-center">
                       <Monitor className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">GPUs:</span>
+                      <span className="text-sm text-muted-foreground">
+                        GPUs:
+                      </span>
                       <span className="text-sm font-medium text-card-foreground ml-auto">
                         {workload.gpus}
                       </span>
@@ -664,10 +840,14 @@ export default function WorkloadDetailPage() {
             {/* Metadata */}
             <Card>
               <CardContent>
-                <h2 className="text-lg font-semibold text-card-foreground mb-4">Metadata</h2>
+                <h3 className="text-lg font-semibold text-card-foreground mb-4">
+                  Metadata
+                </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm text-muted-foreground">Created</label>
+                    <label className="text-sm text-muted-foreground">
+                      Created
+                    </label>
                     <div className="flex items-center mt-1">
                       <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
                       <span className="text-sm text-card-foreground">
@@ -676,7 +856,9 @@ export default function WorkloadDetailPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground">Last Updated</label>
+                    <label className="text-sm text-muted-foreground">
+                      Last Updated
+                    </label>
                     <div className="flex items-center mt-1">
                       <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
                       <span className="text-sm text-card-foreground">
