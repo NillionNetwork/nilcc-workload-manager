@@ -1,26 +1,37 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
-import { components, cn } from '@/styles/design-system';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, disabled, children, ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', loading, disabled, children, type = 'submit', ...props }, ref) => {
+    const variantClasses = {
+      primary: '',
+      secondary: 'nillion-button-secondary',
+      danger: '',
+      ghost: 'nillion-button-ghost',
+      outline: 'nillion-button-outline',
+    };
+
+    const sizeClasses = {
+      sm: 'nillion-small',
+      md: '',
+      lg: 'nillion-large',
+    };
+
     return (
       <button
-        className={cn(
-          components.button.base,
-          components.button.sizes[size],
-          components.button.variants[variant],
-          loading && 'opacity-50 cursor-not-allowed',
-          disabled && 'opacity-50 cursor-not-allowed',
+        className={[
+          variantClasses[variant],
+          sizeClasses[size],
           className
-        )}
+        ].filter(Boolean).join(' ')}
         disabled={disabled || loading}
         ref={ref}
+        type={variant === 'secondary' ? 'button' : type}
         {...props}
       >
         {loading && (

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Settings, Layers, Plus } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
-import { components, cn } from '@/styles/design-system';
 import { Badge, Button, ThemeToggleSlider } from '@/components/ui';
 
 export default function Navbar() {
@@ -18,37 +17,43 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className={components.nav.base}>
-      <div className={components.container}>
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-foreground">
+    <nav style={{ borderBottom: '1px solid var(--nillion-border)', backgroundColor: 'var(--nillion-bg-secondary)', marginBottom: '1rem' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', height: '4rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+              <Link href="/" style={{ fontSize: '1.25rem', fontWeight: 'bold', textDecoration: 'none', fontFamily: 'var(--nillion-font-heading)' }}>
                 nilCC Workload Manager
               </Link>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <div style={{ display: 'flex', marginLeft: '2rem', gap: '1.5rem', height: '100%' }}>
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={cn(
-                      components.nav.link,
-                      isActive ? components.nav.linkActive : components.nav.linkInactive
-                    )}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      height: '100%',
+                      textDecoration: 'none',
+                      color: isActive ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
+                      fontWeight: '500',
+                      padding: '0 0.5rem',
+                      transition: 'all 200ms ease'
+                    }}
                   >
-                    <item.icon className="h-4 w-4 mr-2" />
+                    <item.icon style={{ height: '1rem', width: '1rem', marginRight: '0.5rem' }} />
                     {item.name}
                   </Link>
                 );
               })}
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <ThemeToggleSlider />
-            <div className="flex-shrink-0">
+            <div style={{ flexShrink: 0 }}>
               {apiKey ? (
                 <Badge variant="success">API Key Set</Badge>
               ) : (

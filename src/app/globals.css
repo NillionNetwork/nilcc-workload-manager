@@ -1,50 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  /* Light theme */
+  /* Light theme - Using Nillion brand colors */
   --background: #ffffff;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
+  --foreground: #000000;
+  --card: #f9f9f9;
+  --card-foreground: #000000;
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --accent: #f5f5f5;
-  --accent-foreground: #171717;
+  --popover-foreground: #000000;
+  --primary: #0000ff;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f7f7;
+  --secondary-foreground: #000000;
+  --muted: #e0e0e0;
+  --muted-foreground: #666666;
+  --accent: #ccccff;
+  --accent-foreground: #000000;
   --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #171717;
-  --radius: 0.5rem;
+  --destructive-foreground: #ffffff;
+  --border: #e0e0e0;
+  --input: #e0e0e0;
+  --ring: #0000ff;
+  --radius: 0.375rem;
 }
 
 .dark {
-  /* Dark theme */
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --card: #171717;
-  --card-foreground: #fafafa;
-  --popover: #171717;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #171717;
-  --secondary: #262626;
-  --secondary-foreground: #fafafa;
-  --muted: #262626;
-  --muted-foreground: #a3a3a3;
-  --accent: #262626;
-  --accent-foreground: #fafafa;
-  --destructive: #7f1d1d;
-  --destructive-foreground: #fafafa;
-  --border: #404040;
-  --input: #262626;
-  --ring: #d4d4d8;
+  /* Dark theme - Using Nillion brand colors */
+  --background: #12125a;
+  --foreground: #ffffff;
+  --card: #1a1a6e;
+  --card-foreground: #ffffff;
+  --popover: #1a1a6e;
+  --popover-foreground: #ffffff;
+  --primary: #8a89ff;
+  --primary-foreground: #000000;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #ffffff;
+  --muted: #3a3a3a;
+  --muted-foreground: #b0b0b0;
+  --accent: #4746a7;
+  --accent-foreground: #ffffff;
+  --destructive: #ff6b6b;
+  --destructive-foreground: #ffffff;
+  --border: #4746a7;
+  --input: #4746a7;
+  --ring: #8a89ff;
 }
 
 @theme inline {

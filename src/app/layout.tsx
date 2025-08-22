@@ -26,12 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="stylesheet" href="/nillion.css" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}
+        className={`${geistSans.variable} ${geistMono.variable}`}
       >
         <SettingsProvider>
           <Navbar />
-          <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1rem' }}>
             {children}
           </main>
         </SettingsProvider>

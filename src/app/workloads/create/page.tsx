@@ -1,13 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useSettings } from '@/contexts/SettingsContext';
-import { Card, CardContent, Button, Input, Textarea, Alert } from '@/components/ui';
-import { components } from '@/styles/design-system';
-import { Plus, Settings } from 'lucide-react';
-import { CreateWorkloadRequest } from '@/lib/nilcc-types';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSettings } from "@/contexts/SettingsContext";
+import {
+  Card,
+  CardContent,
+  Button,
+  Input,
+  Textarea,
+  Alert,
+} from "@/components/ui";
+import { Plus, Settings } from "lucide-react";
+import { CreateWorkloadRequest } from "@/lib/nilcc-types";
 
 export default function CreateWorkloadPage() {
   const router = useRouter();
@@ -17,57 +23,58 @@ export default function CreateWorkloadPage() {
   const [availableServices, setAvailableServices] = useState<string[]>([]);
 
   // Form state
-  const [name, setName] = useState('');
-  const [imageType, setImageType] = useState<'public' | 'private'>('public');
-  
+  const [name, setName] = useState("");
+  const [imageType, setImageType] = useState<"public" | "private">("public");
+
   // Public image fields
-  const [dockerImage, setDockerImage] = useState('');
-  const [containerPort, setContainerPort] = useState('80');
-  const [serviceName, setServiceName] = useState('api');
-  
+  const [dockerImage, setDockerImage] = useState("");
+  const [containerPort, setContainerPort] = useState("80");
+  const [serviceName, setServiceName] = useState("api");
+
   // Private image fields
   const [dockerCompose, setDockerCompose] = useState(`services:
   web:
     image: caddy:2
     command: |
       caddy respond --listen :8080 --body '{"hello":"world"}' --header "Content-Type: application/json"`);
-  const [serviceToExpose, setServiceToExpose] = useState('web');
-  const [servicePortToExpose, setServicePortToExpose] = useState('8080');
-  
+  const [serviceToExpose, setServiceToExpose] = useState("web");
+  const [servicePortToExpose, setServicePortToExpose] = useState("8080");
+
   // Resources
-  const [memory, setMemory] = useState('2048');
-  const [cpus, setCpus] = useState('1');
-  const [disk, setDisk] = useState('10');
-  const [gpus, setGpus] = useState('0');
-  
+  const [memory, setMemory] = useState("2048");
+  const [cpus, setCpus] = useState("1");
+  const [disk, setDisk] = useState("10");
+  const [gpus, setGpus] = useState("0");
+
   // Environment variables
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
 
   // Validation
   const validateDockerImage = (image: string): string | null => {
     if (!image) return null;
-    
+
     // Must contain a colon for tag
-    if (!image.includes(':')) {
-      return 'Docker image must include a tag (e.g., nginx:latest, node:18, redis:alpine)';
+    if (!image.includes(":")) {
+      return "Docker image must include a tag (e.g., nginx:latest, node:18, redis:alpine)";
     }
-    
+
     // Basic format validation
-    const parts = image.split(':');
+    const parts = image.split(":");
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      return 'Invalid Docker image format. Use: image:tag';
+      return "Invalid Docker image format. Use: image:tag";
     }
-    
+
     return null;
   };
 
-  const dockerImageError = imageType === 'public' ? validateDockerImage(dockerImage) : null;
+  const dockerImageError =
+    imageType === "public" ? validateDockerImage(dockerImage) : null;
 
   // Parse Docker Compose to extract service names
   const parseDockerCompose = (yaml: string): string[] => {
     try {
       // Basic YAML parsing for services
-      const lines = yaml.split('\n');
+      const lines = yaml.split("\n");
       const services: string[] = [];
       let inServices = false;
       let currentIndent = -1;
@@ -77,7 +84,7 @@ export default function CreateWorkloadPage() {
         const indent = line.length - line.trimStart().length;
 
         // Check if we're in the services section
-        if (trimmed === 'services:') {
+        if (trimmed === "services:") {
           inServices = true;
           currentIndent = indent;
           continue;
@@ -92,7 +99,7 @@ export default function CreateWorkloadPage() {
         }
 
         // Exit services section if we're back at the root level
-        if (inServices && indent <= currentIndent && trimmed !== '') {
+        if (inServices && indent <= currentIndent && trimmed !== "") {
           inServices = false;
         }
       }
@@ -105,10 +112,10 @@ export default function CreateWorkloadPage() {
 
   // Update available services when Docker Compose changes
   useEffect(() => {
-    if (imageType === 'private' && dockerCompose) {
+    if (imageType === "private" && dockerCompose) {
       const services = parseDockerCompose(dockerCompose);
       setAvailableServices(services);
-      
+
       // Auto-select first service if current selection is invalid
       if (services.length > 0 && !services.includes(serviceToExpose)) {
         setServiceToExpose(services[0]);
@@ -118,27 +125,29 @@ export default function CreateWorkloadPage() {
 
   // Generate compose preview for public images
   const generateComposePreview = (): string => {
-    if (imageType !== 'public' || !dockerImage) return '';
-    
-    const service = serviceName || 'api';
-    
+    if (imageType !== "public" || !dockerImage) return "";
+
+    const service = serviceName || "api";
+
     let compose = `services:\n  ${service}:\n    image: ${dockerImage}`;
-    
+
     // Only add expose if port is not 80
-    if (containerPort !== '80') {
+    if (containerPort !== "80") {
       compose += `\n    expose:\n      - "${containerPort}"`;
     }
-    
+
     if (envVars.length > 0) {
-      const validEnvVars = envVars.filter(({ key, value }) => key.trim() && value.trim());
+      const validEnvVars = envVars.filter(
+        ({ key, value }) => key.trim() && value.trim()
+      );
       if (validEnvVars.length > 0) {
-        compose += '\n    environment:';
+        compose += "\n    environment:";
         validEnvVars.forEach(({ key, value }) => {
           compose += `\n      - ${key.trim()}=${value.trim()}`;
         });
       }
     }
-    
+
     return compose;
   };
 
@@ -170,31 +179,41 @@ export default function CreateWorkloadPage() {
         cpus: parseInt(cpus),
         disk: parseInt(disk),
         gpus: parseInt(gpus),
-        envVars: Object.keys(envVarsObject).length > 0 ? envVarsObject : undefined,
+        envVars:
+          Object.keys(envVarsObject).length > 0 ? envVarsObject : undefined,
       };
 
-      const workloadData = imageType === 'public' 
-        ? {
-            ...baseData,
-            dockerImage,
-            containerPort: parseInt(containerPort),
-            serviceName,
-          }
-        : {
-            ...baseData,
-            dockerCompose,
-            serviceToExpose,
-            servicePortToExpose: parseInt(servicePortToExpose),
-          };
+      const workloadData =
+        imageType === "public"
+          ? {
+              ...baseData,
+              dockerImage,
+              containerPort: parseInt(containerPort),
+              serviceName,
+            }
+          : {
+              ...baseData,
+              dockerCompose,
+              serviceToExpose,
+              servicePortToExpose: parseInt(servicePortToExpose),
+            };
 
-      const response = await client.createWorkload(workloadData as CreateWorkloadRequest);
+      const response = await client.createWorkload(
+        workloadData as CreateWorkloadRequest
+      );
       router.push(`/workloads/${response.workloadId}`);
     } catch (err) {
       if (err instanceof Error) {
-        const errorWithResponse = err as Error & { response?: { data?: { errors?: string[] } } };
-        setError(errorWithResponse.response?.data?.errors?.[0] || err.message || 'Failed to create workload');
+        const errorWithResponse = err as Error & {
+          response?: { data?: { errors?: string[] } };
+        };
+        setError(
+          errorWithResponse.response?.data?.errors?.[0] ||
+            err.message ||
+            "Failed to create workload"
+        );
       } else {
-        setError('Failed to create workload');
+        setError("Failed to create workload");
       }
     } finally {
       setCreating(false);
@@ -202,14 +221,18 @@ export default function CreateWorkloadPage() {
   };
 
   const addEnvVar = () => {
-    setEnvVars([...envVars, { key: '', value: '' }]);
+    setEnvVars([...envVars, { key: "", value: "" }]);
   };
 
   const removeEnvVar = (index: number) => {
     setEnvVars(envVars.filter((_, i) => i !== index));
   };
 
-  const updateEnvVar = (index: number, field: 'key' | 'value', value: string) => {
+  const updateEnvVar = (
+    index: number,
+    field: "key" | "value",
+    value: string
+  ) => {
     const updated = [...envVars];
     updated[index][field] = value;
     setEnvVars(updated);
@@ -217,15 +240,19 @@ export default function CreateWorkloadPage() {
 
   if (!apiKey) {
     return (
-      <div className={components.section}>
+      <div style={{ marginBottom: "1.5rem" }}>
         <Alert variant="warning" className="flex items-center">
           <Settings className="h-4 w-4 mr-2" />
           <div>
             <p className="font-medium">API Key Required</p>
             <p className="text-sm mt-1">
-              You need to set your API key in settings before you can create workloads.
+              You need to set your API key in settings before you can create
+              workloads.
             </p>
-            <Link href="/settings" className="text-sm underline mt-1 inline-block">
+            <Link
+              href="/settings"
+              className="text-sm underline mt-1 inline-block"
+            >
               Go to Settings
             </Link>
           </div>
@@ -235,11 +262,15 @@ export default function CreateWorkloadPage() {
   }
 
   return (
-    <div className={components.section}>
+    <div style={{ marginBottom: "1.5rem" }}>
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-foreground">Create New Workload</h1>
-        <p className="text-muted-foreground text-sm">Deploy a container in a Confidential VM</p>
+        <h1 className="text-2xl font-bold text-foreground">
+          Create New Workload
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Deploy a container in nilCC
+        </p>
       </div>
 
       {/* Error */}
@@ -254,11 +285,14 @@ export default function CreateWorkloadPage() {
         {/* Basic Information */}
         <Card>
           <CardContent className="py-4">
-            <h2 className="text-base font-semibold text-card-foreground mb-3">Basic Information</h2>
+            <h2 className="text-base font-semibold text-card-foreground mb-3">
+              Basic Information
+            </h2>
             <div className="space-y-3">
               <div>
-                <label className={components.label}>Workload Name *</label>
+                <label>Workload Name *</label>
                 <Input
+                  type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="my-secure-app"
@@ -272,75 +306,174 @@ export default function CreateWorkloadPage() {
         {/* Docker Configuration */}
         <Card>
           <CardContent className="py-4">
-            <h2 className="text-base font-semibold text-card-foreground mb-3">Docker Configuration</h2>
-            
+            <h2 className="text-base font-semibold text-card-foreground mb-3">
+              Docker Configuration
+            </h2>
+
             {/* Image Type Selection */}
-            <div className="mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setImageType('public')}
-                  className={`p-3 border rounded-lg text-left transition-colors cursor-pointer ${
-                    imageType === 'public'
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border hover:border-muted-foreground bg-card text-card-foreground'
-                  }`}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <p
+                style={{
+                  marginBottom: "0.75rem",
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                }}
+              >
+                Choose configuration type:
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    cursor: "pointer",
+                    padding: "0.75rem",
+                    border: "2px solid",
+                    borderColor:
+                      imageType === "public"
+                        ? "var(--nillion-primary)"
+                        : "var(--nillion-border)",
+                    borderRadius: "0.375rem",
+                    backgroundColor:
+                      imageType === "public"
+                        ? "var(--nillion-primary-lightest)"
+                        : "transparent",
+                    transition: "all 200ms ease",
+                  }}
                 >
-                  <div className="flex items-center mb-1">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${
-                      imageType === 'public' ? 'bg-primary' : 'bg-muted-foreground'
-                    }`} />
-                    <span className={`font-medium text-sm ${
-                      imageType === 'public' ? 'text-primary' : 'text-card-foreground'
-                    }`}>Public Docker Image</span>
+                  <input
+                    type="radio"
+                    name="imageType"
+                    value="public"
+                    checked={imageType === "public"}
+                    onChange={() => setImageType("public")}
+                    style={{ marginTop: "0.125rem" }}
+                  />
+                  <div style={{ marginLeft: "0.5rem" }}>
+                    <span
+                      style={{
+                        fontWeight: "600",
+                        color: imageType === "public" ? "#000000" : "var(--nillion-text)",
+                      }}
+                    >
+                      Public Docker Image
+                    </span>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: imageType === "public" ? "#666666" : "var(--nillion-text-secondary)",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      Use an image from Docker Hub (e.g., nginx:latest, node:18)
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Use an image from Docker Hub
-                  </p>
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => setImageType('private')}
-                  className={`p-3 border rounded-lg text-left transition-colors cursor-pointer ${
-                    imageType === 'private'
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border hover:border-muted-foreground bg-card text-card-foreground'
-                  }`}
+                </label>
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    cursor: "pointer",
+                    padding: "0.75rem",
+                    border: "2px solid",
+                    borderColor:
+                      imageType === "private"
+                        ? "var(--nillion-primary)"
+                        : "var(--nillion-border)",
+                    borderRadius: "0.375rem",
+                    backgroundColor:
+                      imageType === "private"
+                        ? "var(--nillion-primary-lightest)"
+                        : "transparent",
+                    transition: "all 200ms ease",
+                  }}
                 >
-                  <div className="flex items-center mb-1">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${
-                      imageType === 'private' ? 'bg-primary' : 'bg-muted-foreground'
-                    }`} />
-                    <span className={`font-medium text-sm ${
-                      imageType === 'private' ? 'text-primary' : 'text-card-foreground'
-                    }`}>Docker Compose</span>
+                  <input
+                    type="radio"
+                    name="imageType"
+                    value="private"
+                    checked={imageType === "private"}
+                    onChange={() => setImageType("private")}
+                    style={{ marginTop: "0.125rem" }}
+                  />
+                  <div style={{ marginLeft: "0.5rem" }}>
+                    <span
+                      style={{
+                        fontWeight: "600",
+                        color: imageType === "private" ? "#000000" : "var(--nillion-text)",
+                      }}
+                    >
+                      Docker Compose
+                    </span>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: imageType === "private" ? "#666666" : "var(--nillion-text-secondary)",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      Full Docker Compose configuration with multiple services
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Full Docker Compose config
-                  </p>
-                </button>
+                </label>
               </div>
             </div>
 
+            {/* Divider */}
+            <hr
+              style={{
+                border: "none",
+                borderTop: "1px solid var(--nillion-border)",
+                margin: "1.5rem 0",
+              }}
+            />
+
             {/* Public Image Configuration */}
-            {imageType === 'public' && (
+            {imageType === "public" && (
               <div className="space-y-3">
                 <div>
-                  <label className={components.label}>Docker Image *</label>
+                  <label>Docker Image *</label>
                   <Input
+                    type="text"
                     value={dockerImage}
                     onChange={(e) => setDockerImage(e.target.value)}
                     placeholder="nginx:latest"
                     required
-                    className={dockerImageError ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
+                    style={
+                      dockerImageError
+                        ? { borderColor: "var(--nillion-destructive)" }
+                        : {}
+                    }
                   />
                   {dockerImageError && (
-                    <p className="text-sm text-red-600 mt-1">{dockerImageError}</p>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--nillion-destructive)",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      {dockerImageError}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className={components.label}>Container Port</label>
+                  <label>Container Port</label>
+                  <p
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--nillion-text-secondary)",
+                    }}
+                  >
+                    Port your app listens on
+                  </p>
                   <Input
                     type="number"
                     value={containerPort}
@@ -350,24 +483,22 @@ export default function CreateWorkloadPage() {
                     max="65535"
                     required
                   />
-                  <p className={components.helperText}>
-                    Port your app listens on
-                  </p>
                 </div>
                 <div>
-                  <label className={components.label}>Service Name</label>
+                  <label>Service Name</label>
                   <Input
+                    type="text"
                     value={serviceName}
                     onChange={(e) => setServiceName(e.target.value)}
                     placeholder="api"
                     required
                   />
                 </div>
-                
+
                 {/* Compose Preview */}
                 {dockerImage && (
                   <div>
-                    <label className={components.label}>Docker Compose Preview</label>
+                    <label>Docker Compose Preview</label>
                     <pre className="bg-muted border border-border rounded p-3 text-sm overflow-x-auto text-foreground">
                       <code>{generateComposePreview()}</code>
                     </pre>
@@ -377,31 +508,30 @@ export default function CreateWorkloadPage() {
             )}
 
             {/* Docker Compose Configuration */}
-            {imageType === 'private' && (
+            {imageType === "private" && (
               <div className="space-y-3">
                 <div>
-                  <label className={components.label}>Docker Compose Configuration *</label>
+                  <label>Docker Compose Configuration *</label>
                   <Textarea
                     value={dockerCompose}
                     onChange={(e) => setDockerCompose(e.target.value)}
                     placeholder="Enter your Docker Compose YAML..."
                     rows={8}
-                    className="font-mono text-sm"
+                    style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
                     required
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className={components.label}>Service to Expose *</label>
+                    <label>Service to Expose *</label>
                     {availableServices.length > 0 ? (
                       <select
                         value={serviceToExpose}
                         onChange={(e) => setServiceToExpose(e.target.value)}
-                        className={components.input.base}
                         required
                       >
                         <option value="">Select a service</option>
-                        {availableServices.map(service => (
+                        {availableServices.map((service) => (
                           <option key={service} value={service}>
                             {service}
                           </option>
@@ -409,21 +539,28 @@ export default function CreateWorkloadPage() {
                       </select>
                     ) : (
                       <Input
+                        type="text"
                         value={serviceToExpose}
                         onChange={(e) => setServiceToExpose(e.target.value)}
                         placeholder="Enter service name"
                         required
                       />
                     )}
-                    <p className={components.helperText}>
-                      {availableServices.length > 0 
-                        ? `Found ${availableServices.length} service${availableServices.length > 1 ? 's' : ''}`
-                        : 'Enter Docker Compose to see services'
-                      }
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--nillion-text-secondary)",
+                      }}
+                    >
+                      {availableServices.length > 0
+                        ? `Found ${availableServices.length} service${
+                            availableServices.length > 1 ? "s" : ""
+                          }`
+                        : "Enter Docker Compose to see services"}
                     </p>
                   </div>
                   <div>
-                    <label className={components.label}>Service Port *</label>
+                    <label>Service Port *</label>
                     <Input
                       type="number"
                       value={servicePortToExpose}
@@ -433,7 +570,12 @@ export default function CreateWorkloadPage() {
                       min="1"
                       max="65535"
                     />
-                    <p className={components.helperText}>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--nillion-text-secondary)",
+                      }}
+                    >
                       Port to expose
                     </p>
                   </div>
@@ -446,10 +588,12 @@ export default function CreateWorkloadPage() {
         {/* Resource Allocation */}
         <Card>
           <CardContent className="py-4">
-            <h2 className="text-base font-semibold text-card-foreground mb-3">Resources</h2>
+            <h2 className="text-base font-semibold text-card-foreground mb-3">
+              Resources
+            </h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
-                <label className={components.label}>Memory (MB) *</label>
+                <label>Memory (MB) *</label>
                 <Input
                   type="number"
                   value={memory}
@@ -460,7 +604,7 @@ export default function CreateWorkloadPage() {
                 />
               </div>
               <div>
-                <label className={components.label}>CPUs *</label>
+                <label>CPUs *</label>
                 <Input
                   type="number"
                   value={cpus}
@@ -471,7 +615,7 @@ export default function CreateWorkloadPage() {
                 />
               </div>
               <div>
-                <label className={components.label}>Disk (GB) *</label>
+                <label>Disk (GB) *</label>
                 <Input
                   type="number"
                   value={disk}
@@ -482,7 +626,7 @@ export default function CreateWorkloadPage() {
                 />
               </div>
               <div>
-                <label className={components.label}>GPUs (optional)</label>
+                <label>GPUs (optional)</label>
                 <Input
                   type="number"
                   value={gpus}
@@ -499,41 +643,66 @@ export default function CreateWorkloadPage() {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-card-foreground">Environment Variables</h2>
-              <Button type="button" variant="secondary" size="sm" onClick={addEnvVar}>
+              <h2 className="text-base font-semibold text-card-foreground">
+                Environment Variables
+              </h2>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={addEnvVar}
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Variable
               </Button>
             </div>
-            
+
             {envVars.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No environment variables added</p>
+              <p className="text-muted-foreground text-sm">
+                No environment variables added
+              </p>
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {envVars.map((envVar, index) => (
-                  <div key={index} className="flex items-center space-x-3">
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
                     <Input
+                      type="text"
                       value={envVar.key}
-                      onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
+                      onChange={(e) =>
+                        updateEnvVar(index, "key", e.target.value)
+                      }
                       placeholder="VARIABLE_NAME"
-                      className="font-mono"
+                      style={{ fontFamily: "monospace" }}
                     />
-                    <span className="text-muted-foreground">=</span>
+                    <span style={{ color: 'var(--nillion-text-secondary)', fontSize: '1.25rem', fontFamily: 'monospace', padding: '0 0.25rem' }}>=</span>
                     <Input
+                      type="text"
                       value={envVar.value}
-                      onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
+                      onChange={(e) =>
+                        updateEnvVar(index, "value", e.target.value)
+                      }
                       placeholder="value"
-                      className="font-mono"
+                      style={{ fontFamily: "monospace" }}
                     />
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
                       onClick={() => removeEnvVar(index)}
-                      className="text-red-600 hover:text-red-700"
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        transition: 'color 200ms ease',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#ef4444'}
                     >
                       Remove
-                    </Button>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -549,7 +718,12 @@ export default function CreateWorkloadPage() {
           <Button
             type="submit"
             loading={creating}
-            disabled={!name || (imageType === 'public' ? (!dockerImage || !!dockerImageError) : !dockerCompose)}
+            disabled={
+              !name ||
+              (imageType === "public"
+                ? !dockerImage || !!dockerImageError
+                : !dockerCompose)
+            }
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Workload

@@ -8,45 +8,49 @@ export function ThemeToggleSlider() {
   const isDark = theme === 'dark';
 
   return (
-    <div className="flex items-center space-x-2">
-      <button
-        onClick={toggleTheme}
-        className={`
-          relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent 
-          transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
-          ${isDark ? 'bg-muted' : 'bg-gray-700'}
-        `}
-        role="switch"
-        aria-checked={isDark}
-        aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+    <button
+      onClick={toggleTheme}
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '2.75rem',
+        height: '1.5rem',
+        padding: '0.125rem',
+        backgroundColor: isDark ? 'var(--nillion-primary)' : 'var(--nillion-grey)',
+        border: 'none',
+        borderRadius: '9999px',
+        cursor: 'pointer',
+        transition: 'all 200ms ease',
+        outline: 'none'
+      }}
+      role="switch"
+      aria-checked={isDark}
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          left: isDark ? 'calc(100% - 1.25rem - 0.125rem)' : '0.125rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '1.25rem',
+          height: '1.25rem',
+          backgroundColor: 'white',
+          borderRadius: '50%',
+          boxShadow: 'var(--nillion-shadow)',
+          transition: 'all 200ms ease',
+          pointerEvents: 'none'
+        }}
       >
-        <span
-          className={`
-            pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 
-            transition duration-200 ease-in-out
-            ${isDark ? 'translate-x-5' : 'translate-x-0'}
-          `}
-        >
-          <span
-            className={`
-              absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out
-              ${isDark ? 'opacity-0' : 'opacity-100'}
-            `}
-            aria-hidden="true"
-          >
-            <Sun className="h-3 w-3 text-gray-600" />
-          </span>
-          <span
-            className={`
-              absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out
-              ${isDark ? 'opacity-100' : 'opacity-0'}
-            `}
-            aria-hidden="true"
-          >
-            <Moon className="h-3 w-3 text-gray-600" />
-          </span>
-        </span>
-      </button>
-    </div>
+        {isDark ? (
+          <Moon style={{ width: '0.75rem', height: '0.75rem', color: 'var(--nillion-primary)' }} />
+        ) : (
+          <Sun style={{ width: '0.75rem', height: '0.75rem', color: 'var(--nillion-grey-dark)' }} />
+        )}
+      </span>
+    </button>
   );
 }

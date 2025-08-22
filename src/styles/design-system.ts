@@ -1,17 +1,38 @@
-// Simplified Grayscale Design System
+// Nillion Brand Design System
 export const colors = {
-  // Grayscale palette for everything
+  // Nillion brand colors
+  nillion: {
+    primary: '#0000ff',           // Nillion blue
+    primaryHover: '#0000b3',      // Darker blue for hover
+    primaryActive: '#000080',     // Even darker for active
+    primaryLight: '#3333ff',      // Light blue
+    primaryLighter: '#4d4dff',    // Lighter blue
+    primaryLightest: '#ccccff',   // Lightest blue
+    
+    // Dark mode colors
+    darkPrimary: '#8a89ff',       // Light purple for dark mode
+    darkPrimaryHover: '#a5a4ff',  // Lighter purple hover
+    darkPrimaryActive: '#6f6eff', // Darker purple active
+    
+    // Background colors
+    bg: '#ffffff',
+    bgSecondary: '#f9f9f9',
+    darkBg: '#12125a',            // Deep blue for dark mode
+    darkBgSecondary: '#1a1a6e',   // Lighter deep blue
+  },
+  
+  // Grayscale palette with Nillion adjustments
   gray: {
-    50: 'rgb(249 250 251)',   // Lightest backgrounds
-    100: 'rgb(243 244 246)',  // Light backgrounds
-    200: 'rgb(229 231 235)',  // Borders
-    300: 'rgb(209 213 219)',  // Disabled states
-    400: 'rgb(156 163 175)',  // Placeholder text
-    500: 'rgb(107 114 128)',  // Secondary text
-    600: 'rgb(75 85 99)',     // Body text
-    700: 'rgb(55 65 81)',     // Headings
-    800: 'rgb(31 41 55)',     // Strong text
-    900: 'rgb(17 24 39)',     // Darkest text
+    50: '#f7f7f7',    // Nillion grey-light
+    100: '#e0e0e0',   // Nillion grey
+    200: '#646464',   // Nillion grey-dark
+    300: '#666666',   // Text secondary
+    400: '#b0b0b0',   // Dark mode text secondary
+    500: '#4746a7',   // Dark mode border
+    600: '#3a3a3a',   // Dark mode grey
+    700: '#2a2a2a',   // Dark mode grey-light
+    800: '#000000',   // Light mode text
+    900: '#ffffff',   // Dark mode text
   },
   
   // Utility colors
@@ -35,10 +56,11 @@ export const components = {
       lg: 'px-6 py-3 text-base',
     },
     variants: {
-      primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border',
+      primary: 'nillion-button-primary',
+      secondary: 'nillion-button-secondary',
       danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-      ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
+      ghost: 'nillion-button-ghost',
+      outline: 'nillion-button-outline',
     }
   },
   

@@ -454,29 +454,49 @@ export default function WorkloadDetailPage() {
                   </div>
 
                   {/* Logs Tabs */}
-                  <div className="border-b border-border mb-4">
-                    <nav className="flex space-x-8">
+                  <div style={{ borderBottom: '2px solid var(--nillion-border)', marginBottom: '1rem' }}>
+                    <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
                       <button
                         onClick={() => setActiveLogsTab('system')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                          activeLogsTab === 'system'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
+                        style={{
+                          padding: '0.75rem 1.5rem',
+                          marginBottom: '-2px',
+                          border: 'none',
+                          borderBottom: activeLogsTab === 'system' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
+                          backgroundColor: activeLogsTab === 'system' ? 'var(--nillion-bg)' : 'transparent',
+                          color: activeLogsTab === 'system' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
+                          fontWeight: '600',
+                          fontSize: '0.875rem',
+                          cursor: 'pointer',
+                          transition: 'all 200ms ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
                       >
-                        <FileText className="h-4 w-4 inline mr-2" />
+                        <FileText style={{ height: '1rem', width: '1rem' }} />
                         System Logs
                       </button>
                       {workload.status === 'running' && (
                         <button
                           onClick={() => setActiveLogsTab('container')}
-                          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                            activeLogsTab === 'container'
-                              ? 'border-primary text-primary'
-                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                          }`}
+                          style={{
+                            padding: '0.75rem 1.5rem',
+                            marginBottom: '-2px',
+                            border: 'none',
+                            borderBottom: activeLogsTab === 'container' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
+                            backgroundColor: activeLogsTab === 'container' ? 'var(--nillion-bg)' : 'transparent',
+                            color: activeLogsTab === 'container' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            transition: 'all 200ms ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}
                         >
-                          <Terminal className="h-4 w-4 inline mr-2" />
+                          <Terminal style={{ height: '1rem', width: '1rem' }} />
                           Container Logs
                         </button>
                       )}
@@ -509,25 +529,41 @@ export default function WorkloadDetailPage() {
 
                   {/* Stream Tabs for Container Logs */}
                   {activeLogsTab === 'container' && (
-                    <div className="border-b border-border mb-4">
-                      <nav className="flex space-x-8">
+                    <div style={{ borderBottom: '2px solid var(--nillion-border)', marginBottom: '1rem' }}>
+                      <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
                         <button
                           onClick={() => setActiveStreamTab('stderr')}
-                          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                            activeStreamTab === 'stderr'
-                              ? 'border-primary text-primary'
-                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                          }`}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            marginBottom: '-2px',
+                            border: 'none',
+                            borderBottom: activeStreamTab === 'stderr' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
+                            backgroundColor: activeStreamTab === 'stderr' ? 'var(--nillion-bg)' : 'transparent',
+                            color: activeStreamTab === 'stderr' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            transition: 'all 200ms ease',
+                            fontFamily: 'monospace'
+                          }}
                         >
                           stderr
                         </button>
                         <button
                           onClick={() => setActiveStreamTab('stdout')}
-                          className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                            activeStreamTab === 'stdout'
-                              ? 'border-primary text-primary'
-                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                          }`}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            marginBottom: '-2px',
+                            border: 'none',
+                            borderBottom: activeStreamTab === 'stdout' ? '2px solid var(--nillion-primary)' : '2px solid transparent',
+                            backgroundColor: activeStreamTab === 'stdout' ? 'var(--nillion-bg)' : 'transparent',
+                            color: activeStreamTab === 'stdout' ? 'var(--nillion-primary)' : 'var(--nillion-text-secondary)',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            transition: 'all 200ms ease',
+                            fontFamily: 'monospace'
+                          }}
                         >
                           stdout
                         </button>
