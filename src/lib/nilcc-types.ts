@@ -93,3 +93,10 @@ export interface WorkloadTier {
   diskGb: number;
   cost: number;
 }
+
+export interface Account {
+  accountId: string;
+  name: string;
+  credits: number;
+  createdAt: string;
+}
