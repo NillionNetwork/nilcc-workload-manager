@@ -36,6 +36,7 @@ export interface WorkloadResponse {
   cpus: number;
   disk: number;
   gpus: number;
+  creditRate: number;
   status: 'scheduled' | 'starting' | 'running' | 'stopped' | 'error';
   domain: string;
   accountId: string;

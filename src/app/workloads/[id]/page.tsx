@@ -21,6 +21,7 @@ import {
   Terminal,
   Copy,
   Check,
+  CreditCard,
 } from "lucide-react";
 
 export default function WorkloadDetailPage() {
@@ -833,6 +834,15 @@ export default function WorkloadDetailPage() {
                       </span>
                     </div>
                   )}
+                  <div className="flex items-center">
+                    <CreditCard className="h-4 w-4 text-muted-foreground mr-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Cost:
+                    </span>
+                    <span className="text-sm font-medium text-card-foreground ml-auto">
+                      {workload.creditRate ?? 0} credit{(workload.creditRate ?? 0) !== 1 ? 's' : ''}/min
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
