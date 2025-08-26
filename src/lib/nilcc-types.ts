@@ -82,3 +82,13 @@ export interface WorkloadSystemLogsRequest {
 export interface LogsResponse {
   lines: string[];
 }
+
+export interface WorkloadTier {
+  id: string;
+  name: string;
+  cpus: number;
+  gpus: number;
+  memoryMb: number;
+  diskGb: number;
+  cost: number;
+}

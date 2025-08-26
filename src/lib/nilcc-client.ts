@@ -5,7 +5,8 @@ import {
   Container,
   WorkloadContainerLogsRequest,
   WorkloadSystemLogsRequest,
-  LogsResponse
+  LogsResponse,
+  WorkloadTier
 } from './nilcc-types';
 
 export class NilccClient {
@@ -84,6 +85,15 @@ export class NilccClient {
     const response: AxiosResponse<LogsResponse> = await axios.post(
       `${this.baseUrl}/workloads/${request.workloadId}/logs`,
       request,
+      { headers: this.headers }
+    );
+
+    return response.data;
+  }
+
+  async listWorkloadTiers(): Promise<WorkloadTier[]> {
+    const response: AxiosResponse<WorkloadTier[]> = await axios.get(
+      `${this.baseUrl}/workload-tiers`,
       { headers: this.headers }
     );
 
