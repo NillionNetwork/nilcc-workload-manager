@@ -7,7 +7,8 @@ import {
   WorkloadSystemLogsRequest,
   LogsResponse,
   WorkloadTier,
-  Account
+  Account,
+  ListWorkloadEventsResponse
 } from './nilcc-types';
 
 export class NilccClient {
@@ -104,6 +105,40 @@ export class NilccClient {
   async getAccount(): Promise<Account> {
     const response: AxiosResponse<Account> = await axios.get(
       `${this.baseUrl}/accounts/me`,
+      { headers: this.headers }
+    );
+
+    return response.data;
+  }
+
+  async startWorkload(workloadId: string): Promise<void> {
+    await axios.post(
+      `${this.baseUrl}/workloads/start`,
+      { workloadId },
+      { headers: this.headers }
+    );
+  }
+
+  async stopWorkload(workloadId: string): Promise<void> {
+    await axios.post(
+      `${this.baseUrl}/workloads/stop`,
+      { workloadId },
+      { headers: this.headers }
+    );
+  }
+
+  async restartWorkload(workloadId: string): Promise<void> {
+    await axios.post(
+      `${this.baseUrl}/workloads/restart`,
+      { workloadId },
+      { headers: this.headers }
+    );
+  }
+
+  async listWorkloadEvents(workloadId: string): Promise<ListWorkloadEventsResponse> {
+    const response: AxiosResponse<ListWorkloadEventsResponse> = await axios.post(
+      `${this.baseUrl}/workload-events/list`,
+      { workloadId },
       { headers: this.headers }
     );
 

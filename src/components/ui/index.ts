@@ -5,3 +5,4 @@ export { Badge } from './Badge';
 export { Alert } from './Alert';
 export { ThemeToggle } from './ThemeToggle';
 export { ThemeToggleSlider } from './ThemeToggleSlider';
+export { Modal } from './Modal';

@@ -100,3 +100,26 @@ export interface Account {
   credits: number;
   createdAt: string;
 }
+
+export type WorkloadEventKind = 
+  | { kind: 'created' }
+  | { kind: 'starting' }
+  | { kind: 'stopped' }
+  | { kind: 'vmRestarted' }
+  | { kind: 'forcedRestart' }
+  | { kind: 'running' }
+  | { kind: 'failedToStart'; error: string };
+
+export interface WorkloadEvent {
+  eventId: string;
+  details: WorkloadEventKind;
+  timestamp: string;
+}
+
+export interface ListWorkloadEventsRequest {
+  workloadId: string;
+}
+
+export interface ListWorkloadEventsResponse {
+  events: WorkloadEvent[];
+}

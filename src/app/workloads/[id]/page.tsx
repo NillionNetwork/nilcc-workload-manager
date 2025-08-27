@@ -1,12 +1,20 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { useSettings } from "@/contexts/SettingsContext";
-import { Card, CardContent, Button, Badge, Alert } from "@/components/ui";
-import { components } from "@/styles/design-system";
-import { WorkloadResponse, Container } from "@/lib/nilcc-types";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useSettings } from '@/contexts/SettingsContext';
+import {
+  Card,
+  CardContent,
+  Button,
+  Badge,
+  Alert,
+  Modal,
+  Input,
+} from '@/components/ui';
+import { components } from '@/styles/design-system';
+import { WorkloadResponse, Container, WorkloadEvent } from '@/lib/nilcc-types';
 import {
   ExternalLink,
   Trash2,
@@ -22,7 +30,11 @@ import {
   Copy,
   Check,
   CreditCard,
-} from "lucide-react";
+  Play,
+  Square,
+  RotateCw,
+  Activity,
+} from 'lucide-react';
 
 export default function WorkloadDetailPage() {
   const { id } = useParams();
@@ -33,26 +45,44 @@ export default function WorkloadDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Buffer time to allow backend to update status after actions
+  const backendBufferTime = 3000; // 3 seconds
+
   // Logs state
   const [containers, setContainers] = useState<Container[]>([]);
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [containerLogs, setContainerLogs] = useState<
-    Record<string, Record<"stdout" | "stderr", string[]>>
+    Record<string, Record<'stdout' | 'stderr', string[]>>
   >({});
-  const [selectedContainer, setSelectedContainer] = useState<string>("");
-  const [activeLogsTab, setActiveLogsTab] = useState<"system" | "container">(
-    "system"
+  const [selectedContainer, setSelectedContainer] = useState<string>('');
+  const [activeLogsTab, setActiveLogsTab] = useState<'system' | 'container'>(
+    'system'
   );
-  const [activeStreamTab, setActiveStreamTab] = useState<"stdout" | "stderr">(
-    "stderr"
+  const [activeStreamTab, setActiveStreamTab] = useState<'stdout' | 'stderr'>(
+    'stderr'
   );
   const [systemLogsLoading, setSystemLogsLoading] = useState(false);
   const [containerLogsLoading, setContainerLogsLoading] = useState<
-    Record<"stdout" | "stderr", boolean>
+    Record<'stdout' | 'stderr', boolean>
   >({ stdout: false, stderr: false });
   const [logsError, setLogsError] = useState<string | null>(null);
   const [tailLogs, setTailLogs] = useState(true);
   const [copiedCompose, setCopiedCompose] = useState(false);
+
+  // Action state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    action: 'delete' | 'start' | 'stop' | 'restart' | null;
+    loading: boolean;
+  }>({ isOpen: false, action: null, loading: false });
+  const [confirmName, setConfirmName] = useState('');
+  const [actionInProgress, setActionInProgress] = useState(false);
+  const [stoppingWorkload, setStoppingWorkload] = useState(false);
+  const [startingWorkload, setStartingWorkload] = useState(false);
+
+  // Events state
+  const [events, setEvents] = useState<WorkloadEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   // Ref for auto-scrolling logs
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -83,10 +113,10 @@ export default function WorkloadDetailPage() {
           setError(
             errorWithResponse.response?.data?.errors?.[0] ||
               err.message ||
-              "Failed to fetch workload details"
+              'Failed to fetch workload details'
           );
         } else {
-          setError("Failed to fetch workload details");
+          setError('Failed to fetch workload details');
         }
       } finally {
         if (showLoader) {
@@ -97,8 +127,27 @@ export default function WorkloadDetailPage() {
     [client, id]
   );
 
-  const fetchContainers = useCallback(async () => {
+  const fetchEvents = useCallback(async () => {
     if (!client || !id) return;
+
+    try {
+      setEventsLoading(true);
+      const response = await client.listWorkloadEvents(id as string);
+      setEvents(
+        response.events.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )
+      );
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [client, id]);
+
+  const fetchContainers = useCallback(async () => {
+    if (!client || !id || stoppingWorkload || startingWorkload) return;
 
     try {
       const containerList = await client.listContainers(id as string);
@@ -112,12 +161,12 @@ export default function WorkloadDetailPage() {
         setSelectedContainer(containerName);
       }
     } catch (err) {
-      console.error("Failed to fetch containers:", err);
+      console.error('Failed to fetch containers:', err);
     }
-  }, [client, id, selectedContainer]);
+  }, [client, id, selectedContainer, stoppingWorkload, startingWorkload]);
 
   const fetchSystemLogs = useCallback(async () => {
-    if (!client || !id) return;
+    if (!client || !id || stoppingWorkload || startingWorkload) return;
 
     try {
       setSystemLogsLoading(true);
@@ -132,17 +181,27 @@ export default function WorkloadDetailPage() {
       setTimeout(scrollToBottom, 100);
     } catch (err) {
       if (err instanceof Error) {
-        setLogsError(err.message);
+        const errorWithResponse = err as Error & {
+          response?: { status?: number };
+        };
+        // Handle 500 errors gracefully - logs might not be available during transitions
+        if (errorWithResponse.response?.status === 500) {
+          setLogsError(null);
+          setSystemLogs([]);
+          // Don't show error for 500s, just show empty logs
+        } else {
+          setLogsError(err.message);
+        }
       } else {
-        setLogsError("Failed to fetch system logs");
+        setLogsError('Failed to fetch system logs');
       }
     } finally {
       setSystemLogsLoading(false);
     }
-  }, [client, id, tailLogs, scrollToBottom]);
+  }, [client, id, tailLogs, scrollToBottom, stoppingWorkload, startingWorkload]);
 
   const fetchContainerLogs = useCallback(
-    async (containerName: string, stream: "stdout" | "stderr") => {
+    async (containerName: string, stream: 'stdout' | 'stderr') => {
       if (!client || !id) return;
 
       try {
@@ -166,9 +225,24 @@ export default function WorkloadDetailPage() {
         setTimeout(scrollToBottom, 100);
       } catch (err) {
         if (err instanceof Error) {
-          setLogsError(err.message);
+          const errorWithResponse = err as Error & {
+            response?: { status?: number };
+          };
+          // Handle 500 errors gracefully
+          if (errorWithResponse.response?.status === 500) {
+            setLogsError(null);
+            setContainerLogs((prev) => ({
+              ...prev,
+              [containerName]: {
+                ...prev[containerName],
+                [stream]: [],
+              },
+            }));
+          } else {
+            setLogsError(err.message);
+          }
         } else {
-          setLogsError("Failed to fetch container logs");
+          setLogsError('Failed to fetch container logs');
         }
       } finally {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
@@ -178,7 +252,7 @@ export default function WorkloadDetailPage() {
   );
 
   const refreshLogs = useCallback(() => {
-    if (activeLogsTab === "system") {
+    if (activeLogsTab === 'system') {
       fetchSystemLogs();
     } else if (selectedContainer) {
       fetchContainerLogs(selectedContainer, activeStreamTab);
@@ -194,33 +268,52 @@ export default function WorkloadDetailPage() {
   useEffect(() => {
     if (client && id) {
       fetchWorkload();
+      fetchEvents();
     } else {
       setLoading(false);
     }
-  }, [client, id, fetchWorkload]);
+  }, [client, id, fetchWorkload, fetchEvents]);
 
-  // Fetch system logs when workload exists (for all statuses)
+  // Fetch system logs when workload is in an active state
   useEffect(() => {
-    if (workload && client && id) {
+    if (
+      workload &&
+      client &&
+      id &&
+      !actionInProgress && // Don't fetch during actions
+      !stoppingWorkload && // Don't fetch when stopping
+      !startingWorkload && // Don't fetch when starting
+      (workload.status === 'running' ||
+        workload.status === 'starting' ||
+        workload.status === 'scheduled')
+    ) {
       fetchSystemLogs();
     }
-  }, [workload, client, id, fetchSystemLogs]);
+  }, [workload, client, id, actionInProgress, stoppingWorkload, startingWorkload, fetchSystemLogs]);
 
   // Fetch containers only when workload is running
   useEffect(() => {
-    if (workload && workload.status === "running" && client && id) {
+    if (
+      workload &&
+      workload.status === 'running' &&
+      client &&
+      id &&
+      !actionInProgress &&
+      !stoppingWorkload &&
+      !startingWorkload
+    ) {
       fetchContainers();
     }
-  }, [workload, client, id, fetchContainers]);
+  }, [workload, client, id, actionInProgress, stoppingWorkload, startingWorkload, fetchContainers]);
 
   // Switch to system logs tab when workload is not running
   useEffect(() => {
     if (
       workload &&
-      workload.status !== "running" &&
-      activeLogsTab === "container"
+      workload.status !== 'running' &&
+      activeLogsTab === 'container'
     ) {
-      setActiveLogsTab("system");
+      setActiveLogsTab('system');
     }
   }, [workload, activeLogsTab]);
 
@@ -228,8 +321,9 @@ export default function WorkloadDetailPage() {
   useEffect(() => {
     if (
       selectedContainer &&
-      activeLogsTab === "container" &&
-      workload?.status === "running"
+      activeLogsTab === 'container' &&
+      workload?.status === 'running' &&
+      !actionInProgress
     ) {
       fetchContainerLogs(selectedContainer, activeStreamTab);
     }
@@ -238,60 +332,170 @@ export default function WorkloadDetailPage() {
     activeLogsTab,
     activeStreamTab,
     workload?.status,
+    actionInProgress,
     fetchContainerLogs,
   ]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh only when workload is starting
   useEffect(() => {
-    if (!client || !id) return;
+    if (!client || !id || workload?.status !== 'starting') return;
 
     const interval = setInterval(() => {
       fetchWorkload(false); // Don't show loader for auto-refresh
-    }, 30000); // 30 seconds
+      fetchEvents();
+    }, 15000); // Check every 15 seconds when starting
 
     return () => clearInterval(interval);
-  }, [client, id, fetchWorkload]);
+  }, [client, id, workload?.status, fetchWorkload, fetchEvents]);
 
-  const handleDelete = async () => {
-    if (
-      !client ||
-      !workload ||
-      !confirm(`Are you sure you want to delete "${workload.name}"?`)
-    )
-      return;
+  const executeStartAction = async () => {
+    if (!client || !workload) return;
+
+    setActionInProgress(true);
+    setStartingWorkload(true); // Block all fetches immediately
 
     try {
-      setDeleting(true);
-      await client.deleteWorkload(workload.workloadId);
-      router.push("/workloads");
+      await client.startWorkload(workload.workloadId);
+      // Clear existing data since we're starting
+      setSystemLogs([]);
+      setContainers([]);
+      setContainerLogs({});
+      // Wait for backend to update status
+      await new Promise(resolve => setTimeout(resolve, backendBufferTime));
+      // Now refresh to show status change
+      await fetchWorkload();
+      await fetchEvents();
+      // Refresh logs after a short delay
+      setTimeout(() => {
+        fetchSystemLogs();
+      }, 1000);
+      setActionInProgress(false);
+      setStartingWorkload(false);
     } catch (err) {
+      setActionInProgress(false);
+      setStartingWorkload(false);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
           response?: { data?: { errors?: string[] } };
         };
         alert(
-          `Failed to delete workload: ${
+          `Failed to start workload: ${
             errorWithResponse.response?.data?.errors?.[0] || err.message
           }`
         );
       } else {
-        alert("Failed to delete workload");
+        alert('Failed to start workload');
       }
-      setDeleting(false);
+    }
+  };
+
+  const handleAction = async (
+    action: 'delete' | 'start' | 'stop' | 'restart'
+  ) => {
+    if (!client || !workload) return;
+
+    // Start action doesn't need confirmation
+    if (action === 'start') {
+      await executeStartAction();
+    } else {
+      setConfirmModal({ isOpen: true, action, loading: false });
+      setConfirmName('');
+    }
+  };
+
+  const executeAction = async () => {
+    if (
+      !client ||
+      !workload ||
+      confirmName !== workload.name ||
+      !confirmModal.action
+    ) {
+      return;
+    }
+
+    setConfirmModal((prev) => ({ ...prev, loading: true }));
+    setActionInProgress(true);
+
+    try {
+      switch (confirmModal.action) {
+        case 'delete':
+          await client.deleteWorkload(workload.workloadId);
+          router.push('/workloads');
+          break;
+        case 'stop':
+          setStoppingWorkload(true); // Block all fetches immediately
+          await client.stopWorkload(workload.workloadId);
+          setConfirmModal({ isOpen: false, action: null, loading: false });
+          // Clear logs and containers BEFORE refresh to prevent errors
+          setSystemLogs([]);
+          setContainers([]);
+          setContainerLogs({});
+          setLogsError(null);
+          // Clear selected container to prevent container logs fetch
+          setSelectedContainer('');
+          // Wait for backend to update status
+          await new Promise(resolve => setTimeout(resolve, backendBufferTime));
+          // Now refresh to show status change
+          await fetchWorkload();
+          await fetchEvents();
+          // Reset flags
+          setActionInProgress(false);
+          setStoppingWorkload(false);
+          break;
+        case 'restart':
+          setStartingWorkload(true); // Block all fetches immediately
+          await client.restartWorkload(workload.workloadId);
+          setConfirmModal({ isOpen: false, action: null, loading: false });
+          // Clear existing data since we're restarting
+          setSystemLogs([]);
+          setContainers([]);
+          setContainerLogs({});
+          // Wait for backend to update status
+          await new Promise(resolve => setTimeout(resolve, backendBufferTime));
+          // Now refresh to show status change
+          await fetchWorkload();
+          await fetchEvents();
+          // Refresh logs after a short delay
+          setTimeout(() => {
+            fetchSystemLogs();
+          }, 1000);
+          setActionInProgress(false);
+          setStartingWorkload(false);
+          break;
+      }
+      if (confirmModal.action === 'delete') {
+        setConfirmModal({ isOpen: false, action: null, loading: false });
+      }
+      setActionInProgress(false);
+    } catch (err) {
+      setConfirmModal((prev) => ({ ...prev, loading: false }));
+      setActionInProgress(false);
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & {
+          response?: { data?: { errors?: string[] } };
+        };
+        alert(
+          `Failed to ${confirmModal.action} workload: ${
+            errorWithResponse.response?.data?.errors?.[0] || err.message
+          }`
+        );
+      } else {
+        alert(`Failed to ${confirmModal.action} workload`);
+      }
     }
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "running":
-        return "success";
-      case "starting":
-      case "scheduled":
-        return "warning";
-      case "error":
-        return "danger";
+      case 'running':
+        return 'success';
+      case 'starting':
+      case 'scheduled':
+        return 'warning';
+      case 'error':
+        return 'danger';
       default:
-        return "neutral";
+        return 'neutral';
     }
   };
 
@@ -325,7 +529,7 @@ export default function WorkloadDetailPage() {
         <div className="flex items-center">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {workload?.name || "Workload Details"}
+              {workload?.name || 'Workload Details'}
             </h1>
             {workload && (
               <p className="text-muted-foreground font-mono text-sm">
@@ -335,22 +539,14 @@ export default function WorkloadDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <Button
-            variant="secondary"
-            onClick={() => fetchWorkload()}
-            loading={loading}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          {workload && (
-            <Button variant="danger" onClick={handleDelete} loading={deleting}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          )}
-        </div>
+        <Button
+          variant="secondary"
+          onClick={() => fetchWorkload()}
+          loading={loading}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* Error State */}
@@ -377,367 +573,397 @@ export default function WorkloadDetailPage() {
 
       {/* Workload Details */}
       {!loading && !error && workload && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Status and Access */}
-            <Card>
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-card-foreground">
-                    Status & Access
-                  </h3>
-                  <Badge variant={getStatusVariant(workload.status)}>
-                    {workload.status}
-                  </Badge>
-                </div>
-
-                {workload.domain && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className={components.label}>
-                        Application URL
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <code className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm text-foreground">
-                          https://{workload.domain}
-                        </code>
-                        {workload.status === "running" && (
-                          <a
-                            href={`https://${workload.domain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Button size="sm">
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              Visit
-                            </Button>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {workload.status === "starting" && (
-                  <Alert variant="info" className="mt-4">
-                    <div className="flex items-start">
-                      <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">Deployment in Progress</p>
-                        <p className="text-sm mt-1">
-                          Your workload is being deployed to nilCC. This
-                          typically takes 3-6 minutes.
-                        </p>
-                      </div>
-                    </div>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Docker Configuration */}
-            <Card>
-              <CardContent>
-                <h3 className="text-lg font-semibold text-card-foreground mb-4">
-                  Docker Configuration
-                </h3>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className={components.label}>Docker Compose</label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(workload.dockerCompose);
-                        setCopiedCompose(true);
-                        setTimeout(() => setCopiedCompose(false), 2000);
-                      }}
-                      className="text-xs"
-                    >
-                      {copiedCompose ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <pre className="bg-muted border border-border rounded p-4 text-sm overflow-x-auto text-foreground">
-                    <code>{workload.dockerCompose}</code>
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Environment Variables */}
-            {workload.envVars && Object.keys(workload.envVars).length > 0 && (
-              <Card>
-                <CardContent>
-                  <h3 className="text-lg font-semibold text-card-foreground mb-4">
-                    Environment Variables
-                  </h3>
-                  <div className="space-y-2">
-                    {Object.entries(workload.envVars).map(([key, value]) => (
-                      <div key={key} className="flex items-center space-x-2">
-                        <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
-                          {key}
-                        </code>
-                        <span className="text-muted-foreground">=</span>
-                        <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
-                          {value}
-                        </code>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Logs Section */}
-            {(workload.status === "running" ||
-              workload.status === "starting" ||
-              workload.status === "scheduled") && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Info */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Status and Access */}
               <Card>
                 <CardContent>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-card-foreground">
-                      Logs
-                    </h3>
-                    <div className="flex items-center space-x-3">
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                          fontSize: "0.875rem",
-                          margin: 0,
-                          marginRight: "0.5rem",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={tailLogs}
-                          onChange={(e) => setTailLogs(e.target.checked)}
-                          style={{ margin: 0 }}
-                        />
-                        <span
-                          style={{ color: "var(--nillion-text-secondary)" }}
-                        >
-                          Tail logs
-                        </span>
-                      </label>
+                    <h4 className="text-lg font-semibold text-card-foreground">
+                      Status
+                    </h4>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={getStatusVariant(workload.status)}>
+                        {workload.status}
+                      </Badge>
+                      {actionInProgress && (
+                        <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+
+                  {workload.domain && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className={components.label}>
+                          Application URL
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <code className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm text-foreground">
+                            https://{workload.domain}
+                          </code>
+                          {workload.status === 'running' && (
+                            <a
+                              href={`https://${workload.domain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Button size="sm">
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Visit
+                              </Button>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {workload.status === 'starting' && (
+                    <Alert variant="info" className="mt-4">
+                      <div className="flex items-start">
+                        <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">Deployment in Progress</p>
+                          <p className="text-sm mt-1">
+                            Your workload is being deployed to nilCC. This
+                            typically takes 3-6 minutes.
+                          </p>
+                        </div>
+                      </div>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Docker Configuration */}
+              <Card>
+                <CardContent>
+                  <h4 className="text-lg font-semibold text-card-foreground mb-4">
+                    Docker Configuration
+                  </h4>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className={components.label}>Docker Compose</label>
                       <Button
+                        variant="ghost"
                         size="sm"
-                        variant="secondary"
-                        onClick={refreshLogs}
-                        loading={
-                          activeLogsTab === "system"
-                            ? systemLogsLoading
-                            : containerLogsLoading[activeStreamTab]
-                        }
+                        onClick={() => {
+                          navigator.clipboard.writeText(workload.dockerCompose);
+                          setCopiedCompose(true);
+                          setTimeout(() => setCopiedCompose(false), 2000);
+                        }}
+                        className="text-xs"
                       >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        Refresh
+                        {copiedCompose ? (
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy
+                          </>
+                        )}
                       </Button>
                     </div>
+                    <pre className="bg-muted border border-border rounded p-4 text-sm overflow-x-auto text-foreground">
+                      <code>{workload.dockerCompose}</code>
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Environment Variables */}
+              {workload.envVars && Object.keys(workload.envVars).length > 0 && (
+                <Card>
+                  <CardContent>
+                    <h4 className="text-lg font-semibold text-card-foreground mb-4">
+                      Environment Variables
+                    </h4>
+                    <div className="space-y-2">
+                      {Object.entries(workload.envVars).map(([key, value]) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
+                            {key}
+                          </code>
+                          <span className="text-muted-foreground">=</span>
+                          <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
+                            {value}
+                          </code>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Logs Section */}
+              <Card>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-card-foreground">
+                      Logs
+                    </h4>
+                    {(workload.status === 'running' ||
+                      workload.status === 'starting' ||
+                      workload.status === 'scheduled') && (
+                      <div className="flex items-center space-x-3">
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.875rem',
+                            margin: 0,
+                            marginRight: '0.5rem',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={tailLogs}
+                            onChange={(e) => setTailLogs(e.target.checked)}
+                            style={{ margin: 0 }}
+                          />
+                          <span
+                            style={{ color: 'var(--nillion-text-secondary)' }}
+                          >
+                            Tail logs
+                          </span>
+                        </label>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={refreshLogs}
+                          loading={
+                            activeLogsTab === 'system'
+                              ? systemLogsLoading
+                              : containerLogsLoading[activeStreamTab]
+                          }
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Refresh
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Logs Tabs */}
-                  <div
-                    style={{
-                      borderBottom: "2px solid var(--nillion-border)",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    <nav style={{ display: "flex", margin: "0 -0.25rem" }}>
-                      <button
-                        onClick={() => setActiveLogsTab("system")}
-                        style={{
-                          padding: "0.75rem 1.5rem",
-                          marginBottom: "-2px",
-                          border: "none",
-                          borderBottom:
-                            activeLogsTab === "system"
-                              ? "2px solid var(--nillion-primary)"
-                              : "2px solid transparent",
-                          backgroundColor:
-                            activeLogsTab === "system"
-                              ? "var(--nillion-bg)"
-                              : "transparent",
-                          color:
-                            activeLogsTab === "system"
-                              ? "var(--nillion-primary)"
-                              : "var(--nillion-text-secondary)",
-                          fontWeight: "600",
-                          fontSize: "0.875rem",
-                          cursor: "pointer",
-                          transition: "all 200ms ease",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        <FileText style={{ height: "1rem", width: "1rem" }} />
-                        System Logs
-                      </button>
-                      {workload.status === "running" && (
-                        <button
-                          onClick={() => setActiveLogsTab("container")}
-                          style={{
-                            padding: "0.75rem 1.5rem",
-                            marginBottom: "-2px",
-                            border: "none",
-                            borderBottom:
-                              activeLogsTab === "container"
-                                ? "2px solid var(--nillion-primary)"
-                                : "2px solid transparent",
-                            backgroundColor:
-                              activeLogsTab === "container"
-                                ? "var(--nillion-bg)"
-                                : "transparent",
-                            color:
-                              activeLogsTab === "container"
-                                ? "var(--nillion-primary)"
-                                : "var(--nillion-text-secondary)",
-                            fontWeight: "600",
-                            fontSize: "0.875rem",
-                            cursor: "pointer",
-                            transition: "all 200ms ease",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                          }}
-                        >
-                          <Terminal style={{ height: "1rem", width: "1rem" }} />
-                          Container Logs
-                        </button>
-                      )}
-                    </nav>
-                  </div>
-
-                  {/* Container Selection */}
-                  {activeLogsTab === "container" && containers.length > 0 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-muted-foreground mb-2">
-                        Select Container
-                      </label>
-                      <select
-                        value={selectedContainer}
-                        onChange={(e) => setSelectedContainer(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                      >
-                        {containers.map((container, index) => {
-                          const containerName =
-                            (container.names && container.names[0]) ||
-                            container.name ||
-                            `container-${index}`;
-                          const displayName =
-                            (container.names && container.names[0]) ||
-                            container.name ||
-                            `Container ${index + 1}`;
-                          return (
-                            <option
-                              key={`${containerName}-${index}`}
-                              value={containerName}
-                            >
-                              {displayName} (
-                              {container.state || container.status || "Unknown"}
-                              )
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Stream Tabs for Container Logs */}
-                  {activeLogsTab === "container" && (
+                  {(workload.status === 'running' ||
+                    workload.status === 'starting' ||
+                    workload.status === 'scheduled') && (
                     <div
                       style={{
-                        borderBottom: "2px solid var(--nillion-border)",
-                        marginBottom: "1rem",
+                        borderBottom: '2px solid var(--nillion-border)',
+                        marginBottom: '1rem',
                       }}
                     >
-                      <nav style={{ display: "flex", margin: "0 -0.25rem" }}>
+                      <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
                         <button
-                          onClick={() => setActiveStreamTab("stderr")}
+                          onClick={() => setActiveLogsTab('system')}
                           style={{
-                            padding: "0.5rem 1rem",
-                            marginBottom: "-2px",
-                            border: "none",
+                            padding: '0.75rem 1.5rem',
+                            marginBottom: '-2px',
+                            border: 'none',
                             borderBottom:
-                              activeStreamTab === "stderr"
-                                ? "2px solid var(--nillion-primary)"
-                                : "2px solid transparent",
+                              activeLogsTab === 'system'
+                                ? '2px solid var(--nillion-primary)'
+                                : '2px solid transparent',
                             backgroundColor:
-                              activeStreamTab === "stderr"
-                                ? "var(--nillion-bg)"
-                                : "transparent",
+                              activeLogsTab === 'system'
+                                ? 'var(--nillion-bg)'
+                                : 'transparent',
                             color:
-                              activeStreamTab === "stderr"
-                                ? "var(--nillion-primary)"
-                                : "var(--nillion-text-secondary)",
-                            fontWeight: "600",
-                            fontSize: "0.875rem",
-                            cursor: "pointer",
-                            transition: "all 200ms ease",
-                            fontFamily: "monospace",
+                              activeLogsTab === 'system'
+                                ? 'var(--nillion-primary)'
+                                : 'var(--nillion-text-secondary)',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            transition: 'all 200ms ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
                           }}
                         >
-                          stderr
+                          <FileText style={{ height: '1rem', width: '1rem' }} />
+                          System Logs
                         </button>
-                        <button
-                          onClick={() => setActiveStreamTab("stdout")}
-                          style={{
-                            padding: "0.5rem 1rem",
-                            marginBottom: "-2px",
-                            border: "none",
-                            borderBottom:
-                              activeStreamTab === "stdout"
-                                ? "2px solid var(--nillion-primary)"
-                                : "2px solid transparent",
-                            backgroundColor:
-                              activeStreamTab === "stdout"
-                                ? "var(--nillion-bg)"
-                                : "transparent",
-                            color:
-                              activeStreamTab === "stdout"
-                                ? "var(--nillion-primary)"
-                                : "var(--nillion-text-secondary)",
-                            fontWeight: "600",
-                            fontSize: "0.875rem",
-                            cursor: "pointer",
-                            transition: "all 200ms ease",
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          stdout
-                        </button>
+                        {workload.status === 'running' && (
+                          <button
+                            onClick={() => setActiveLogsTab('container')}
+                            style={{
+                              padding: '0.75rem 1.5rem',
+                              marginBottom: '-2px',
+                              border: 'none',
+                              borderBottom:
+                                activeLogsTab === 'container'
+                                  ? '2px solid var(--nillion-primary)'
+                                  : '2px solid transparent',
+                              backgroundColor:
+                                activeLogsTab === 'container'
+                                  ? 'var(--nillion-bg)'
+                                  : 'transparent',
+                              color:
+                                activeLogsTab === 'container'
+                                  ? 'var(--nillion-primary)'
+                                  : 'var(--nillion-text-secondary)',
+                              fontWeight: '600',
+                              fontSize: '0.875rem',
+                              cursor: 'pointer',
+                              transition: 'all 200ms ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                            }}
+                          >
+                            <Terminal
+                              style={{ height: '1rem', width: '1rem' }}
+                            />
+                            Container Logs
+                          </button>
+                        )}
                       </nav>
                     </div>
                   )}
+
+                  {/* Container Selection */}
+                  {activeLogsTab === 'container' &&
+                    containers.length > 0 &&
+                    workload.status === 'running' && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                          Select Container
+                        </label>
+                        <select
+                          value={selectedContainer}
+                          onChange={(e) => setSelectedContainer(e.target.value)}
+                          className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                        >
+                          {containers.map((container, index) => {
+                            const containerName =
+                              (container.names && container.names[0]) ||
+                              container.name ||
+                              `container-${index}`;
+                            const displayName =
+                              (container.names && container.names[0]) ||
+                              container.name ||
+                              `Container ${index + 1}`;
+                            return (
+                              <option
+                                key={`${containerName}-${index}`}
+                                value={containerName}
+                              >
+                                {displayName} (
+                                {container.state ||
+                                  container.status ||
+                                  'Unknown'}
+                                )
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
+
+                  {/* Stream Tabs for Container Logs */}
+                  {activeLogsTab === 'container' &&
+                    workload.status === 'running' && (
+                      <div
+                        style={{
+                          borderBottom: '2px solid var(--nillion-border)',
+                          marginBottom: '1rem',
+                        }}
+                      >
+                        <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
+                          <button
+                            onClick={() => setActiveStreamTab('stderr')}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              marginBottom: '-2px',
+                              border: 'none',
+                              borderBottom:
+                                activeStreamTab === 'stderr'
+                                  ? '2px solid var(--nillion-primary)'
+                                  : '2px solid transparent',
+                              backgroundColor:
+                                activeStreamTab === 'stderr'
+                                  ? 'var(--nillion-bg)'
+                                  : 'transparent',
+                              color:
+                                activeStreamTab === 'stderr'
+                                  ? 'var(--nillion-primary)'
+                                  : 'var(--nillion-text-secondary)',
+                              fontWeight: '600',
+                              fontSize: '0.875rem',
+                              cursor: 'pointer',
+                              transition: 'all 200ms ease',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            stderr
+                          </button>
+                          <button
+                            onClick={() => setActiveStreamTab('stdout')}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              marginBottom: '-2px',
+                              border: 'none',
+                              borderBottom:
+                                activeStreamTab === 'stdout'
+                                  ? '2px solid var(--nillion-primary)'
+                                  : '2px solid transparent',
+                              backgroundColor:
+                                activeStreamTab === 'stdout'
+                                  ? 'var(--nillion-bg)'
+                                  : 'transparent',
+                              color:
+                                activeStreamTab === 'stdout'
+                                  ? 'var(--nillion-primary)'
+                                  : 'var(--nillion-text-secondary)',
+                              fontWeight: '600',
+                              fontSize: '0.875rem',
+                              cursor: 'pointer',
+                              transition: 'all 200ms ease',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            stdout
+                          </button>
+                        </nav>
+                      </div>
+                    )}
 
                   {/* Logs Display */}
                   <div
                     ref={logsContainerRef}
                     className="bg-muted rounded-lg p-4 h-96 overflow-auto font-mono text-sm"
                   >
-                    {logsError ? (
+                    {workload.status !== 'running' &&
+                    workload.status !== 'starting' &&
+                    workload.status !== 'scheduled' ? (
+                      <div className="text-muted-foreground flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>Logs only appear for active workloads</p>
+                          <p className="text-xs mt-1">
+                            Start the workload to see logs
+                          </p>
+                        </div>
+                      </div>
+                    ) : logsError ? (
                       <div className="text-destructive">Error: {logsError}</div>
-                    ) : (activeLogsTab === "system" && systemLogsLoading) ||
-                      (activeLogsTab === "container" &&
+                    ) : (activeLogsTab === 'system' && systemLogsLoading) ||
+                      (activeLogsTab === 'container' &&
                         containerLogsLoading[activeStreamTab]) ? (
                       <div className="text-muted-foreground flex items-center">
                         <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                         Loading logs...
                       </div>
-                    ) : activeLogsTab === "system" ? (
+                    ) : activeLogsTab === 'system' ? (
                       systemLogs.length > 0 ? (
                         <div className="space-y-1">
                           {systemLogs.map((line, index) => (
@@ -751,7 +977,12 @@ export default function WorkloadDetailPage() {
                         </div>
                       ) : (
                         <div className="text-muted-foreground">
-                          No system logs available
+                          {workload.status === 'starting' ||
+                          workload.status === 'scheduled'
+                            ? 'Logs will appear shortly...'
+                            : workload.status === 'stopped'
+                            ? 'No logs available for stopped workloads'
+                            : 'No logs available'}
                         </div>
                       )
                     ) : selectedContainer &&
@@ -780,107 +1011,280 @@ export default function WorkloadDetailPage() {
                       <div className="text-muted-foreground">
                         {selectedContainer
                           ? `No ${activeStreamTab} logs available`
-                          : "Select a container to view logs"}
+                          : 'Select a container to view logs'}
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
+            </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Resource Allocation */}
-            <Card>
-              <CardContent>
-                <h3 className="text-lg font-semibold text-card-foreground mb-4">
-                  Resources
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <MemoryStick className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm text-muted-foreground">
-                      Memory:
-                    </span>
-                    <span className="text-sm font-medium text-card-foreground ml-auto">
-                      {workload.memory} MB
-                    </span>
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Actions */}
+              <Card>
+                <CardContent>
+                  <h4 className="text-lg font-semibold text-card-foreground mb-4">
+                    Actions
+                  </h4>
+                  <div className="space-y-2">
+                    {(workload.status === 'running' ||
+                      workload.status === 'starting') && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleAction('stop')}
+                          className="w-full"
+                        >
+                          <Square className="h-4 w-4 mr-2" />
+                          Stop
+                        </Button>
+                        {workload.status === 'running' && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleAction('restart')}
+                            className="w-full"
+                          >
+                            <RotateCw className="h-4 w-4 mr-2" />
+                            Restart
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    {workload.status === 'stopped' && (
+                      <Button
+                        variant="primary"
+                        onClick={() => handleAction('start')}
+                        className="w-full"
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        Start
+                      </Button>
+                    )}
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleAction('delete')}
+                      className="w-full"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
                   </div>
-                  <div className="flex items-center">
-                    <Cpu className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm text-muted-foreground">CPUs:</span>
-                    <span className="text-sm font-medium text-card-foreground ml-auto">
-                      {workload.cpus}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <HardDrive className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm text-muted-foreground">
-                      Storage:
-                    </span>
-                    <span className="text-sm font-medium text-card-foreground ml-auto">
-                      {workload.disk} GB
-                    </span>
-                  </div>
-                  {workload.gpus > 0 && (
+                </CardContent>
+              </Card>
+
+              {/* Resource Allocation */}
+              <Card>
+                <CardContent>
+                  <h4 className="text-lg font-semibold text-card-foreground mb-4">
+                    Resources
+                  </h4>
+                  <div className="space-y-3">
                     <div className="flex items-center">
-                      <Monitor className="h-4 w-4 text-muted-foreground mr-2" />
+                      <MemoryStick className="h-4 w-4 text-muted-foreground mr-2" />
                       <span className="text-sm text-muted-foreground">
-                        GPUs:
+                        Memory:
                       </span>
                       <span className="text-sm font-medium text-card-foreground ml-auto">
-                        {workload.gpus}
+                        {workload.memory} MB
                       </span>
                     </div>
-                  )}
-                  <div className="flex items-center">
-                    <CreditCard className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm text-muted-foreground">
-                      Cost:
-                    </span>
-                    <span className="text-sm font-medium text-card-foreground ml-auto">
-                      {workload.creditRate ?? 0} credit{(workload.creditRate ?? 0) !== 1 ? 's' : ''}/min
-                    </span>
+                    <div className="flex items-center">
+                      <Cpu className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        CPUs:
+                      </span>
+                      <span className="text-sm font-medium text-card-foreground ml-auto">
+                        {workload.cpus}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <HardDrive className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        Storage:
+                      </span>
+                      <span className="text-sm font-medium text-card-foreground ml-auto">
+                        {workload.disk} GB
+                      </span>
+                    </div>
+                    {workload.gpus > 0 && (
+                      <div className="flex items-center">
+                        <Monitor className="h-4 w-4 text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">
+                          GPUs:
+                        </span>
+                        <span className="text-sm font-medium text-card-foreground ml-auto">
+                          {workload.gpus}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center">
+                      <CreditCard className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        Cost:
+                      </span>
+                      <span className="text-sm font-medium text-card-foreground ml-auto">
+                        {workload.creditRate ?? 0} credit
+                        {(workload.creditRate ?? 0) !== 1 ? 's' : ''}/min
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Metadata */}
-            <Card>
-              <CardContent>
-                <h3 className="text-lg font-semibold text-card-foreground mb-4">
-                  Metadata
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm text-muted-foreground">
-                      Created
-                    </label>
-                    <div className="flex items-center mt-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-sm text-card-foreground">
-                        {new Date(workload.createdAt).toLocaleString()}
-                      </span>
+              {/* Metadata */}
+              <Card>
+                <CardContent>
+                  <h4 className="text-lg font-semibold text-card-foreground mb-4">
+                    Metadata
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-muted-foreground">
+                        Created
+                      </label>
+                      <div className="flex items-center mt-1">
+                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                        <span className="text-sm text-card-foreground">
+                          {new Date(workload.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground">
+                        Last Updated
+                      </label>
+                      <div className="flex items-center mt-1">
+                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                        <span className="text-sm text-card-foreground">
+                          {new Date(workload.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">
-                      Last Updated
-                    </label>
-                    <div className="flex items-center mt-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-sm text-card-foreground">
-                        {new Date(workload.updatedAt).toLocaleString()}
-                      </span>
-                    </div>
+                </CardContent>
+              </Card>
+
+              {/* Events */}
+              <Card>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-card-foreground flex items-center">
+                      <Activity className="h-4 w-4 mr-2" />
+                      Events
+                    </h4>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={fetchEvents}
+                      loading={eventsLoading}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {events.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No events yet
+                      </p>
+                    ) : (
+                      events.map((event) => (
+                        <div
+                          key={event.eventId}
+                          className="text-sm border-b border-border pb-2 last:border-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium capitalize">
+                              {event.details.kind === 'failedToStart'
+                                ? 'Failed to Start'
+                                : event.details.kind}
+                            </span>
+                            <time className="text-xs text-muted-foreground">
+                              {new Date(event.timestamp).toLocaleTimeString()}
+                            </time>
+                          </div>
+                          {event.details.kind === 'failedToStart' && (
+                            <p className="text-xs text-destructive mt-1">
+                              {event.details.error}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+
+          {/* Confirmation Modal */}
+          <Modal
+            isOpen={confirmModal.isOpen}
+            onClose={() => {
+              setConfirmModal({ isOpen: false, action: null, loading: false });
+              setConfirmName('');
+            }}
+            title={`Confirm ${confirmModal.action
+              ?.charAt(0)
+              .toUpperCase()}${confirmModal.action?.slice(1)}`}
+          >
+            <div className="space-y-4">
+              <p className="font-medium">
+                Are you sure you want to {confirmModal.action} this workload?
+              </p>
+              {confirmModal.action === 'delete' && (
+                <p className="text-sm mt-1">This action cannot be undone.</p>
+              )}
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Type{' '}
+                  <span className="font-mono font-semibold bg-secondary text-primary">
+                    {workload.name}
+                  </span>{' '}
+                  to confirm:
+                </p>
+                <Input
+                  type="text"
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  placeholder="Enter workload name"
+                  className="w-full"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setConfirmModal({
+                      isOpen: false,
+                      action: null,
+                      loading: false,
+                    });
+                    setConfirmName('');
+                  }}
+                  disabled={confirmModal.loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant={
+                    confirmModal.action === 'delete' ? 'danger' : 'primary'
+                  }
+                  onClick={executeAction}
+                  disabled={
+                    confirmName !== workload.name || confirmModal.loading
+                  }
+                  loading={confirmModal.loading}
+                >
+                  {confirmModal.action?.charAt(0).toUpperCase()}
+                  {confirmModal.action?.slice(1)}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        </>
       )}
     </div>
   );
