@@ -359,14 +359,17 @@ export default function WorkloadDetailPage() {
     fetchContainerLogs,
   ]);
 
-  // Auto-refresh only when workload is starting
+  // Auto-refresh only when workload is starting or scheduled
   useEffect(() => {
-    if (!client || !id || workload?.status !== 'starting') return;
+    if (!client || !id || (workload?.status !== 'starting' && workload?.status !== 'scheduled')) return;
+
+    // Different intervals for different states
+    const refreshInterval = workload?.status === 'scheduled' ? 3000 : 15000;
 
     const interval = setInterval(() => {
       fetchWorkload(false); // Don't show loader for auto-refresh
       fetchEvents();
-    }, 15000); // Check every 15 seconds when starting
+    }, refreshInterval);
 
     return () => clearInterval(interval);
   }, [client, id, workload?.status, fetchWorkload, fetchEvents]);
