@@ -1007,8 +1007,6 @@ export default function WorkloadDetailPage() {
                           {workload.status === 'starting' ||
                           workload.status === 'scheduled'
                             ? 'Logs will appear shortly...'
-                            : workload.status === 'stopped'
-                            ? 'No logs available for stopped workloads'
                             : 'No logs available'}
                         </div>
                       )
