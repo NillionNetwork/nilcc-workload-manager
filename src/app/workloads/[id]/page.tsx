@@ -198,7 +198,14 @@ export default function WorkloadDetailPage() {
     } finally {
       setSystemLogsLoading(false);
     }
-  }, [client, id, tailLogs, scrollToBottom, stoppingWorkload, startingWorkload]);
+  }, [
+    client,
+    id,
+    tailLogs,
+    scrollToBottom,
+    stoppingWorkload,
+    startingWorkload,
+  ]);
 
   const fetchContainerLogs = useCallback(
     async (containerName: string, stream: 'stdout' | 'stderr') => {
@@ -289,7 +296,15 @@ export default function WorkloadDetailPage() {
     ) {
       fetchSystemLogs();
     }
-  }, [workload, client, id, actionInProgress, stoppingWorkload, startingWorkload, fetchSystemLogs]);
+  }, [
+    workload,
+    client,
+    id,
+    actionInProgress,
+    stoppingWorkload,
+    startingWorkload,
+    fetchSystemLogs,
+  ]);
 
   // Fetch containers only when workload is running
   useEffect(() => {
@@ -304,7 +319,15 @@ export default function WorkloadDetailPage() {
     ) {
       fetchContainers();
     }
-  }, [workload, client, id, actionInProgress, stoppingWorkload, startingWorkload, fetchContainers]);
+  }, [
+    workload,
+    client,
+    id,
+    actionInProgress,
+    stoppingWorkload,
+    startingWorkload,
+    fetchContainers,
+  ]);
 
   // Switch to system logs tab when workload is not running
   useEffect(() => {
@@ -361,7 +384,7 @@ export default function WorkloadDetailPage() {
       setContainers([]);
       setContainerLogs({});
       // Wait for backend to update status
-      await new Promise(resolve => setTimeout(resolve, backendBufferTime));
+      await new Promise((resolve) => setTimeout(resolve, backendBufferTime));
       // Now refresh to show status change
       await fetchWorkload();
       await fetchEvents();
@@ -434,7 +457,9 @@ export default function WorkloadDetailPage() {
           // Clear selected container to prevent container logs fetch
           setSelectedContainer('');
           // Wait for backend to update status
-          await new Promise(resolve => setTimeout(resolve, backendBufferTime));
+          await new Promise((resolve) =>
+            setTimeout(resolve, backendBufferTime)
+          );
           // Now refresh to show status change
           await fetchWorkload();
           await fetchEvents();
@@ -451,7 +476,9 @@ export default function WorkloadDetailPage() {
           setContainers([]);
           setContainerLogs({});
           // Wait for backend to update status
-          await new Promise(resolve => setTimeout(resolve, backendBufferTime));
+          await new Promise((resolve) =>
+            setTimeout(resolve, backendBufferTime)
+          );
           // Now refresh to show status change
           await fetchWorkload();
           await fetchEvents();
@@ -525,15 +552,15 @@ export default function WorkloadDetailPage() {
   return (
     <div className={components.section}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h2 className="text-sm font-bold text-foreground">
               {workload?.name || 'Workload Details'}
-            </h1>
+            </h2>
             {workload && (
               <p className="text-muted-foreground font-mono text-sm">
-                {workload.workloadId}
+                Workload ID: {workload.workloadId}
               </p>
             )}
           </div>
@@ -1037,7 +1064,7 @@ export default function WorkloadDetailPage() {
                           className="w-full"
                         >
                           <Square className="h-4 w-4 mr-2" />
-                          Stop
+                          Stop Workload
                         </Button>
                         {workload.status === 'running' && (
                           <Button
@@ -1046,7 +1073,7 @@ export default function WorkloadDetailPage() {
                             className="w-full"
                           >
                             <RotateCw className="h-4 w-4 mr-2" />
-                            Restart
+                            Restart Workload
                           </Button>
                         )}
                       </>
@@ -1058,7 +1085,7 @@ export default function WorkloadDetailPage() {
                         className="w-full"
                       >
                         <Play className="h-4 w-4 mr-2" />
-                        Start
+                        Start Workload
                       </Button>
                     )}
                     <Button
@@ -1067,7 +1094,7 @@ export default function WorkloadDetailPage() {
                       className="w-full"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
+                      Delete Workload
                     </Button>
                   </div>
                 </CardContent>
