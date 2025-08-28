@@ -37,7 +37,7 @@ export interface WorkloadResponse {
   disk: number;
   gpus: number;
   creditRate: number;
-  status: 'scheduled' | 'starting' | 'running' | 'stopped' | 'error';
+  status: 'scheduled' | 'starting' | 'awaitingCert' | 'running' | 'stopped' | 'error';
   domain: string;
   accountId: string;
   envVars?: Record<string, string>;
@@ -104,6 +104,7 @@ export interface Account {
 export type WorkloadEventKind = 
   | { kind: 'created' }
   | { kind: 'starting' }
+  | { kind: 'awaitingCert' }
   | { kind: 'stopped' }
   | { kind: 'vmRestarted' }
   | { kind: 'forcedRestart' }
@@ -122,4 +123,23 @@ export interface ListWorkloadEventsRequest {
 
 export interface ListWorkloadEventsResponse {
   events: WorkloadEvent[];
+}
+
+export interface SystemStats {
+  memory: {
+    total: number;
+    used: number;
+  };
+  cpus: Array<{
+    name: string;
+    usage: number;
+    frequency: number;
+  }>;
+  disks: Array<{
+    name: string;
+    mountPoint: string;
+    filesystem: string;
+    size: number;
+    used: number;
+  }>;
 }

@@ -14,7 +14,13 @@ import {
   Input,
 } from '@/components/ui';
 import { components } from '@/styles/design-system';
-import { WorkloadResponse, Container, WorkloadEvent } from '@/lib/nilcc-types';
+import {
+  WorkloadResponse,
+  Container,
+  WorkloadEvent,
+  SystemStats,
+} from '@/lib/nilcc-types';
+import WorkloadStats from '@/components/WorkloadStats';
 import {
   ExternalLink,
   Trash2,
@@ -43,7 +49,6 @@ export default function WorkloadDetailPage() {
   const [workload, setWorkload] = useState<WorkloadResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   // Buffer time to allow backend to update status after actions
   const backendBufferTime = 3000; // 3 seconds
@@ -83,6 +88,11 @@ export default function WorkloadDetailPage() {
   // Events state
   const [events, setEvents] = useState<WorkloadEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+
+  // Stats state
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   // Ref for auto-scrolling logs
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -168,6 +178,15 @@ export default function WorkloadDetailPage() {
   const fetchSystemLogs = useCallback(async () => {
     if (!client || !id || stoppingWorkload || startingWorkload) return;
 
+    // Don't fetch logs unless status is awaitingCert or running
+    if (
+      !workload ||
+      (workload.status !== 'awaitingCert' && workload.status !== 'running')
+    ) {
+      setSystemLogs([]);
+      return;
+    }
+
     try {
       setSystemLogsLoading(true);
       setLogsError(null);
@@ -205,11 +224,24 @@ export default function WorkloadDetailPage() {
     scrollToBottom,
     stoppingWorkload,
     startingWorkload,
+    workload,
   ]);
 
   const fetchContainerLogs = useCallback(
     async (containerName: string, stream: 'stdout' | 'stderr') => {
       if (!client || !id) return;
+
+      // Don't fetch logs unless status is running (containers only exist when running)
+      if (!workload || workload.status !== 'running') {
+        setContainerLogs((prev) => ({
+          ...prev,
+          [containerName]: {
+            ...prev[containerName],
+            [stream]: [],
+          },
+        }));
+        return;
+      }
 
       try {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: true }));
@@ -255,13 +287,21 @@ export default function WorkloadDetailPage() {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
       }
     },
-    [client, id, tailLogs, scrollToBottom]
+    [client, id, tailLogs, scrollToBottom, workload]
   );
 
   const refreshLogs = useCallback(() => {
+    // Don't refresh logs unless status is appropriate
+    if (
+      !workload ||
+      (workload.status !== 'awaitingCert' && workload.status !== 'running')
+    ) {
+      return;
+    }
+
     if (activeLogsTab === 'system') {
       fetchSystemLogs();
-    } else if (selectedContainer) {
+    } else if (selectedContainer && workload.status === 'running') {
       fetchContainerLogs(selectedContainer, activeStreamTab);
     }
   }, [
@@ -270,7 +310,28 @@ export default function WorkloadDetailPage() {
     activeStreamTab,
     fetchSystemLogs,
     fetchContainerLogs,
+    workload,
   ]);
+
+  const fetchStats = useCallback(async () => {
+    if (!client || !id || !workload || workload.status !== 'running') return;
+
+    try {
+      setStatsLoading(true);
+      setStatsError(null);
+      const data = await client.getWorkloadStats(id as string);
+      setStats(data);
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+      if (err instanceof Error) {
+        setStatsError(err.message);
+      } else {
+        setStatsError('Failed to fetch system stats');
+      }
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [client, id, workload]);
 
   useEffect(() => {
     if (client && id) {
@@ -290,9 +351,7 @@ export default function WorkloadDetailPage() {
       !actionInProgress && // Don't fetch during actions
       !stoppingWorkload && // Don't fetch when stopping
       !startingWorkload && // Don't fetch when starting
-      (workload.status === 'running' ||
-        workload.status === 'starting' ||
-        workload.status === 'scheduled')
+      (workload.status === 'running' || workload.status === 'awaitingCert')
     ) {
       fetchSystemLogs();
     }
@@ -329,6 +388,19 @@ export default function WorkloadDetailPage() {
     fetchContainers,
   ]);
 
+  // Fetch stats when workload is running (only on initial load or refresh)
+  useEffect(() => {
+    if (
+      workload &&
+      workload.status === 'running' &&
+      client &&
+      id &&
+      !actionInProgress
+    ) {
+      fetchStats();
+    }
+  }, [workload, client, id, actionInProgress, fetchStats]);
+
   // Switch to system logs tab when workload is not running
   useEffect(() => {
     if (
@@ -361,7 +433,12 @@ export default function WorkloadDetailPage() {
 
   // Auto-refresh only when workload is starting or scheduled
   useEffect(() => {
-    if (!client || !id || (workload?.status !== 'starting' && workload?.status !== 'scheduled')) return;
+    if (
+      !client ||
+      !id ||
+      (workload?.status !== 'starting' && workload?.status !== 'scheduled')
+    )
+      return;
 
     // Different intervals for different states
     const refreshInterval = workload?.status === 'scheduled' ? 3000 : 15000;
@@ -521,6 +598,7 @@ export default function WorkloadDetailPage() {
         return 'success';
       case 'starting':
       case 'scheduled':
+      case 'awaitingCert':
         return 'warning';
       case 'error':
         return 'danger';
@@ -624,6 +702,32 @@ export default function WorkloadDetailPage() {
                     </div>
                   </div>
 
+                  {/* Metadata */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="text-sm text-muted-foreground">
+                        Created
+                      </label>
+                      <div className="flex items-center mt-1">
+                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                        <span className="text-sm text-card-foreground">
+                          {new Date(workload.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground">
+                        Last Updated
+                      </label>
+                      <div className="flex items-center mt-1">
+                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                        <span className="text-sm text-card-foreground">
+                          {new Date(workload.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   {workload.domain && (
                     <div className="space-y-3">
                       <div>
@@ -660,6 +764,22 @@ export default function WorkloadDetailPage() {
                           <p className="text-sm mt-1">
                             Your workload is being deployed to nilCC. This
                             typically takes 3-6 minutes.
+                          </p>
+                        </div>
+                      </div>
+                    </Alert>
+                  )}
+
+                  {workload.status === 'awaitingCert' && (
+                    <Alert variant="info" className="mt-4">
+                      <div className="flex items-start">
+                        <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">Awaiting Certificate</p>
+                          <p className="text-sm mt-1">
+                            Your workload is waiting for SSL certificate
+                            provisioning. This usually completes within a few
+                            moments.
                           </p>
                         </div>
                       </div>
@@ -739,8 +859,7 @@ export default function WorkloadDetailPage() {
                       Logs
                     </h4>
                     {(workload.status === 'running' ||
-                      workload.status === 'starting' ||
-                      workload.status === 'scheduled') && (
+                      workload.status === 'awaitingCert') && (
                       <div className="flex items-center space-x-3">
                         <label
                           style={{
@@ -783,8 +902,7 @@ export default function WorkloadDetailPage() {
 
                   {/* Logs Tabs */}
                   {(workload.status === 'running' ||
-                    workload.status === 'starting' ||
-                    workload.status === 'scheduled') && (
+                    workload.status === 'awaitingCert') && (
                     <div
                       style={{
                         borderBottom: '2px solid var(--nillion-border)',
@@ -973,6 +1091,7 @@ export default function WorkloadDetailPage() {
                     className="bg-muted rounded-lg p-4 h-96 overflow-auto font-mono text-sm"
                   >
                     {workload.status !== 'running' &&
+                    workload.status !== 'awaitingCert' &&
                     workload.status !== 'starting' &&
                     workload.status !== 'scheduled' ? (
                       <div className="text-muted-foreground flex items-center justify-center h-full">
@@ -1009,7 +1128,7 @@ export default function WorkloadDetailPage() {
                         <div className="text-muted-foreground">
                           {workload.status === 'starting' ||
                           workload.status === 'scheduled'
-                            ? 'Logs will appear shortly...'
+                            ? 'Logs will be available once deployment completes...'
                             : 'No logs available'}
                         </div>
                       )
@@ -1056,8 +1175,7 @@ export default function WorkloadDetailPage() {
                     Actions
                   </h4>
                   <div className="space-y-2">
-                    {(workload.status === 'running' ||
-                      workload.status === 'starting') && (
+                    {workload.status != 'stopped' && (
                       <>
                         <Button
                           variant="secondary"
@@ -1067,16 +1185,14 @@ export default function WorkloadDetailPage() {
                           <Square className="h-4 w-4 mr-2" />
                           Stop Workload
                         </Button>
-                        {workload.status === 'running' && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => handleAction('restart')}
-                            className="w-full"
-                          >
-                            <RotateCw className="h-4 w-4 mr-2" />
-                            Restart Workload
-                          </Button>
-                        )}
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleAction('restart')}
+                          className="w-full"
+                        >
+                          <RotateCw className="h-4 w-4 mr-2" />
+                          Restart Workload
+                        </Button>
                       </>
                     )}
                     {workload.status === 'stopped' && (
@@ -1105,7 +1221,7 @@ export default function WorkloadDetailPage() {
               <Card>
                 <CardContent>
                   <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                    Resources
+                    Resource Allocation
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center">
@@ -1160,38 +1276,14 @@ export default function WorkloadDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Metadata */}
-              <Card>
-                <CardContent>
-                  <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                    Metadata
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-muted-foreground">
-                        Created
-                      </label>
-                      <div className="flex items-center mt-1">
-                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
-                        <span className="text-sm text-card-foreground">
-                          {new Date(workload.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-muted-foreground">
-                        Last Updated
-                      </label>
-                      <div className="flex items-center mt-1">
-                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
-                        <span className="text-sm text-card-foreground">
-                          {new Date(workload.updatedAt).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* System Stats */}
+              {workload.status === 'running' && (
+                <WorkloadStats
+                  stats={stats}
+                  loading={statsLoading}
+                  error={statsError}
+                />
+              )}
 
               {/* Events */}
               <Card>

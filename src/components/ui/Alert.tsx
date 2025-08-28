@@ -4,7 +4,8 @@ interface AlertProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'success' | 'warning' | 'danger' | 'info';
 }
 
-export function Alert({ className, variant = 'info', children, ...props }: AlertProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function Alert({ className, variant: _variant = 'info', children, ...props }: AlertProps) {
   return (
     <div
       className={`nillion-card ${className || ''}`}

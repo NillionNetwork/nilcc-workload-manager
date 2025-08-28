@@ -1,19 +1,18 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { useSettings } from "@/contexts/SettingsContext";
-import { Card, CardContent, Button, Badge, Alert } from "@/components/ui";
-import { components } from "@/styles/design-system";
-import { WorkloadResponse } from "@/lib/nilcc-types";
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useSettings } from '@/contexts/SettingsContext';
+import { Card, CardContent, Button, Alert } from '@/components/ui';
+import { components } from '@/styles/design-system';
+import { WorkloadResponse } from '@/lib/nilcc-types';
 import {
   Layers,
   Plus,
-  ExternalLink,
   RefreshCw,
   Settings,
   Eye,
-} from "lucide-react";
+} from 'lucide-react';
 
 export default function WorkloadsPage() {
   const { client, apiKey } = useSettings();
@@ -37,10 +36,10 @@ export default function WorkloadsPage() {
         setError(
           errorWithResponse.response?.data?.errors?.[0] ||
             err.message ||
-            "Failed to fetch workloads"
+            'Failed to fetch workloads'
         );
       } else {
-        setError("Failed to fetch workloads");
+        setError('Failed to fetch workloads');
       }
     } finally {
       setLoading(false);
@@ -55,19 +54,6 @@ export default function WorkloadsPage() {
     }
   }, [client, fetchWorkloads]);
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "running":
-        return "success";
-      case "starting":
-      case "scheduled":
-        return "warning";
-      case "error":
-        return "danger";
-      default:
-        return "neutral";
-    }
-  };
 
   if (!apiKey) {
     return (
@@ -186,14 +172,20 @@ export default function WorkloadsPage() {
                       {workload.workloadId}
                     </p>
                   </div>
-                  <Badge variant={getStatusVariant(workload.status)}>
-                    {workload.status}
-                  </Badge>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      workload.status === 'running'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border border-primary text-primary bg-transparent'
+                    }`}
+                  >
+                    {workload.status.toUpperCase()}
+                  </span>
                 </div>
 
                 <div className="space-y-2 text-sm text-muted-foreground mb-4">
                   <p>
-                    <span className="font-medium">Created:</span>{" "}
+                    <span className="font-medium">Created:</span>{' '}
                     {new Date(workload.createdAt).toLocaleDateString()}
                   </p>
                 </div>

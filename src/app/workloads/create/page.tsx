@@ -150,33 +150,6 @@ export default function CreateWorkloadPage() {
     }
   }, [dockerCompose, imageType, serviceToExpose]);
 
-  // Generate compose preview for public images
-  const generateComposePreview = (): string => {
-    if (imageType !== 'public' || !dockerImage) return '';
-
-    const service = serviceName || 'api';
-
-    let compose = `services:\n  ${service}:\n    image: ${dockerImage}`;
-
-    // Only add expose if port is not 80
-    if (containerPort !== '80') {
-      compose += `\n    expose:\n      - "${containerPort}"`;
-    }
-
-    if (envVars.length > 0) {
-      const validEnvVars = envVars.filter(
-        ({ key, value }) => key.trim() && value.trim()
-      );
-      if (validEnvVars.length > 0) {
-        compose += '\n    environment:';
-        validEnvVars.forEach(({ key, value }) => {
-          compose += `\n      - ${key.trim()}=${value.trim()}`;
-        });
-      }
-    }
-
-    return compose;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,8 +280,8 @@ export default function CreateWorkloadPage() {
 
       <form onSubmit={handleSubmit} className="space-y-2">
         {/* Combined Basic Info and Tier Selection */}
-        <Card>
-          <CardContent className="py-1">
+        <Card className="my-4">
+          <CardContent className="">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Left Column - Basic Info */}
               <div>
@@ -376,7 +349,7 @@ export default function CreateWorkloadPage() {
                   </div>
                 )}
                 {!loadingTiers && !tiersError && tiers.length === 0 && (
-                  <Alert variant="warning" className="py-1 px-2 mt-0.5">
+                  <Alert variant="warning" className=" px-2 mt-0.5">
                     <p className="text-xs">No tiers available</p>
                   </Alert>
                 )}
@@ -386,8 +359,8 @@ export default function CreateWorkloadPage() {
         </Card>
 
         {/* Docker Configuration */}
-        <Card>
-          <CardContent className="py-2">
+        <Card className="my-4">
+          <CardContent>
             <h4 className="text-xs font-medium text-card-foreground mb-1">
               Docker Configuration
             </h4>
@@ -551,7 +524,7 @@ export default function CreateWorkloadPage() {
 
         {/* Environment Variables */}
         <Card>
-          <CardContent className="py-2">
+          <CardContent>
             <div className="flex items-center justify-between mb-1">
               <h4 className="text-xs font-medium text-card-foreground">
                 Environment Variables (Optional)
