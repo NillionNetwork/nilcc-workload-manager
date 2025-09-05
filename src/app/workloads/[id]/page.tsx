@@ -40,6 +40,7 @@ import {
   Square,
   RotateCw,
   Activity,
+  Loader2,
 } from 'lucide-react';
 
 export default function WorkloadDetailPage() {
@@ -431,17 +432,17 @@ export default function WorkloadDetailPage() {
     fetchContainerLogs,
   ]);
 
-  // Auto-refresh only when workload is starting or scheduled
+  // Auto-refresh only when workload is starting, scheduled, or awaitingCert
   useEffect(() => {
     if (
       !client ||
       !id ||
-      (workload?.status !== 'starting' && workload?.status !== 'scheduled')
+      (workload?.status !== 'starting' && workload?.status !== 'scheduled' && workload?.status !== 'awaitingCert')
     )
       return;
 
     // Different intervals for different states
-    const refreshInterval = workload?.status === 'scheduled' ? 3000 : 15000;
+    const refreshInterval = (workload?.status === 'scheduled' || workload?.status === 'awaitingCert') ? 3000 : 15000;
 
     const interval = setInterval(() => {
       fetchWorkload(false); // Don't show loader for auto-refresh
@@ -694,7 +695,12 @@ export default function WorkloadDetailPage() {
                     </h4>
                     <div className="flex items-center space-x-2">
                       <Badge variant={getStatusVariant(workload.status)}>
-                        {workload.status}
+                        <span className="flex items-center gap-1">
+                          {(workload.status === 'starting' || workload.status === 'awaitingCert') && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          {workload.status}
+                        </span>
                       </Badge>
                       {actionInProgress && (
                         <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
