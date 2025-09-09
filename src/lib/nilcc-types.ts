@@ -6,6 +6,12 @@ export interface WorkloadOptions {
   envVars?: Record<string, string>;
 }
 
+export interface DockerCredential {
+  server: string;
+  username: string;
+  password: string;
+}
+
 export interface CreateWorkloadRequest {
   name: string;
   memory: number;
@@ -14,6 +20,7 @@ export interface CreateWorkloadRequest {
   gpus: number;
   envVars?: Record<string, string>;
   files?: Record<string, string>;
+  dockerCredentials?: DockerCredential[];
   
   // For public Docker images
   dockerImage?: string;
@@ -85,7 +92,7 @@ export interface LogsResponse {
 }
 
 export interface WorkloadTier {
-  id: string;
+  tierId: string;
   name: string;
   cpus: number;
   gpus: number;

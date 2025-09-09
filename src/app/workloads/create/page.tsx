@@ -13,7 +13,11 @@ import {
   Alert,
 } from '@/components/ui';
 import { Plus, Settings } from 'lucide-react';
-import { CreateWorkloadRequest, WorkloadTier } from '@/lib/nilcc-types';
+import {
+  CreateWorkloadRequest,
+  WorkloadTier,
+  DockerCredential,
+} from '@/lib/nilcc-types';
 
 export default function CreateWorkloadPage() {
   const router = useRouter();
@@ -30,7 +34,7 @@ export default function CreateWorkloadPage() {
 
   // Form state
   const [name, setName] = useState('');
-  const [imageType, setImageType] = useState<'public' | 'private'>('public');
+  const [imageType, setImageType] = useState<'public' | 'private'>('private');
 
   // Public image fields
   const [dockerImage, setDockerImage] = useState('');
@@ -49,8 +53,19 @@ export default function CreateWorkloadPage() {
   // Environment variables
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
 
+  // Docker Registry Credentials
+  const [dockerCredentials, setDockerCredentials] = useState<
+    DockerCredential[]
+  >([]);
+
+  // Files - using Map for better performance with many files
+  const [uploadedFiles, setUploadedFiles] = useState<Map<string, string>>(
+    new Map()
+  );
+  const [filenameSanitized, setFilenameSanitized] = useState(false);
+
   // Get selected tier details
-  const selectedTier = tiers.find((t) => t.id === selectedTierId);
+  const selectedTier = tiers.find((t) => t.tierId === selectedTierId);
 
   // Fetch available tiers on mount
   useEffect(() => {
@@ -62,7 +77,7 @@ export default function CreateWorkloadPage() {
           setTiers(fetchedTiers);
           // Auto-select if only one tier
           if (fetchedTiers.length === 1) {
-            setSelectedTierId(fetchedTiers[0].id);
+            setSelectedTierId(fetchedTiers[0].tierId);
           }
           setTiersError(null);
         })
@@ -150,7 +165,6 @@ export default function CreateWorkloadPage() {
     }
   }, [dockerCompose, imageType, serviceToExpose]);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client || !selectedTier) return;
@@ -173,6 +187,12 @@ export default function CreateWorkloadPage() {
         }
       });
 
+      // Convert files Map to object
+      const filesObject: { [key: string]: string } = {};
+      uploadedFiles.forEach((content, path) => {
+        filesObject[path] = content;
+      });
+
       const baseData = {
         name,
         memory: selectedTier.memoryMb,
@@ -181,6 +201,9 @@ export default function CreateWorkloadPage() {
         gpus: selectedTier.gpus,
         envVars:
           Object.keys(envVarsObject).length > 0 ? envVarsObject : undefined,
+        files: Object.keys(filesObject).length > 0 ? filesObject : undefined,
+        dockerCredentials:
+          dockerCredentials.length > 0 ? dockerCredentials : undefined,
       };
 
       const workloadData =
@@ -236,6 +259,102 @@ export default function CreateWorkloadPage() {
     const updated = [...envVars];
     updated[index][field] = value;
     setEnvVars(updated);
+  };
+
+  // Docker Credentials functions
+  const addDockerCredential = () => {
+    setDockerCredentials([
+      ...dockerCredentials,
+      { server: '', username: '', password: '' },
+    ]);
+  };
+
+  const removeDockerCredential = (index: number) => {
+    setDockerCredentials(dockerCredentials.filter((_, i) => i !== index));
+  };
+
+  const updateDockerCredential = (
+    index: number,
+    field: 'server' | 'username' | 'password',
+    value: string
+  ) => {
+    const updated = [...dockerCredentials];
+    updated[index][field] = value;
+    setDockerCredentials(updated);
+  };
+
+  // File handling functions
+  const removeFile = (path: string) => {
+    const newFiles = new Map(uploadedFiles);
+    newFiles.delete(path);
+    setUploadedFiles(newFiles);
+
+    // Clear sanitization warning if no files left
+    if (newFiles.size === 0) {
+      setFilenameSanitized(false);
+    }
+  };
+
+  const sanitizeFilePath = (path: string): string => {
+    // Replace spaces with underscores and remove any characters not matching the pattern
+    return path.replace(/\s+/g, '_').replace(/[^\w\/._-]/g, '');
+  };
+
+  const handleFileSelect = async (fileList: FileList) => {
+    const newFiles = new Map(uploadedFiles);
+    let anySanitized = false;
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const originalPath = file.webkitRelativePath || file.name;
+      const path = sanitizeFilePath(originalPath);
+
+      // Track if any filename was changed
+      if (path !== originalPath) {
+        anySanitized = true;
+        console.log(`Filename sanitized: "${originalPath}" → "${path}"`);
+      }
+
+      // Read file as base64
+      const base64Content = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64 = e.target?.result as string;
+          resolve(base64.split(',')[1]); // Remove data URL prefix
+        };
+        reader.readAsDataURL(file);
+      });
+
+      newFiles.set(path, base64Content);
+    }
+
+    setUploadedFiles(newFiles);
+    setFilenameSanitized(anySanitized);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const items = e.dataTransfer.items;
+    const fileList: File[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) fileList.push(file);
+      }
+    }
+
+    if (fileList.length > 0) {
+      handleFileSelect(fileList as any);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   if (!apiKey) {
@@ -322,9 +441,9 @@ export default function CreateWorkloadPage() {
                     {/* Always show as radio buttons for consistency */}
                     {tiers.map((tier) => (
                       <label
-                        key={tier.id}
+                        key={tier.tierId}
                         className={`block p-1.5 border rounded-md cursor-pointer transition-all text-xs ${
-                          selectedTierId === tier.id
+                          selectedTierId === tier.tierId
                             ? 'border-primary bg-primary/10'
                             : 'border-border hover:border-primary/50'
                         }`}
@@ -332,9 +451,9 @@ export default function CreateWorkloadPage() {
                         <input
                           type="radio"
                           name="tier"
-                          value={tier.id}
-                          checked={selectedTierId === tier.id}
-                          onChange={() => setSelectedTierId(tier.id)}
+                          value={tier.tierId}
+                          checked={selectedTierId === tier.tierId}
+                          onChange={() => setSelectedTierId(tier.tierId)}
                           className="sr-only"
                         />
                         <div>
@@ -371,23 +490,23 @@ export default function CreateWorkloadPage() {
                 <input
                   type="radio"
                   name="imageType"
-                  value="public"
-                  checked={imageType === 'public'}
-                  onChange={() => setImageType('public')}
-                  className="h-3 w-3"
-                />
-                <span className="text-xs">Docker Image</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="imageType"
                   value="private"
                   checked={imageType === 'private'}
                   onChange={() => setImageType('private')}
                   className="h-3 w-3"
                 />
                 <span className="text-xs">Docker Compose</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="imageType"
+                  value="public"
+                  checked={imageType === 'public'}
+                  onChange={() => setImageType('public')}
+                  className="h-3 w-3"
+                />
+                <span className="text-xs">Docker Image</span>
               </label>
             </div>
 
@@ -516,6 +635,175 @@ export default function CreateWorkloadPage() {
                       className="h-7 text-xs mt-0.5"
                     />
                   </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Docker Registry Credentials */}
+        <Card>
+          <CardContent>
+            <div className="flex items-center justify-between mb-1">
+              <h4 className="text-xs font-medium text-card-foreground">
+                Docker Registry Credentials (Optional)
+              </h4>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={addDockerCredential}
+                className="h-6 text-xs px-2"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+
+            {dockerCredentials.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                No registry credentials
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {dockerCredentials.map((cred, index) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex gap-1.5 items-center">
+                      <Input
+                        type="text"
+                        value={cred.server}
+                        onChange={(e) =>
+                          updateDockerCredential(
+                            index,
+                            'server',
+                            e.target.value
+                          )
+                        }
+                        placeholder="registry.example.com"
+                        className="h-6 text-xs px-2"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeDockerCredential(index)}
+                        className="h-6 px-1.5 text-xs text-destructive hover:text-destructive"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Input
+                        type="text"
+                        value={cred.username}
+                        onChange={(e) =>
+                          updateDockerCredential(
+                            index,
+                            'username',
+                            e.target.value
+                          )
+                        }
+                        placeholder="username"
+                        className="h-6 text-xs px-2"
+                      />
+                      <Input
+                        type="password"
+                        value={cred.password}
+                        onChange={(e) =>
+                          updateDockerCredential(
+                            index,
+                            'password',
+                            e.target.value
+                          )
+                        }
+                        placeholder="password"
+                        className="h-6 text-xs px-2"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Files */}
+        <Card>
+          <CardContent>
+            <h4 className="text-xs font-medium text-card-foreground mb-1">
+              Files (Optional)
+            </h4>
+
+            {/* Drop zone */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-2 border-dashed border-border rounded-md p-4 text-center mb-2 hover:border-primary/50 transition-colors"
+              style={{
+                borderColor:
+                  uploadedFiles.size > 0 ? 'var(--nillion-primary)' : undefined,
+                backgroundColor:
+                  uploadedFiles.size > 0
+                    ? 'var(--nillion-primary-alpha)'
+                    : undefined,
+              }}
+            >
+              <label className="cursor-pointer block">
+                <Input
+                  type="file"
+                  multiple
+                  onChange={(e) =>
+                    e.target.files && handleFileSelect(e.target.files)
+                  }
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Drop files/folders here or click to browse
+                </p>
+              </label>
+            </div>
+
+            {/* File list */}
+            {uploadedFiles.size > 0 && (
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-1">
+                  {uploadedFiles.size} file{uploadedFiles.size === 1 ? '' : 's'}{' '}
+                  selected
+                </p>
+                {filenameSanitized && (
+                  <Alert variant="warning" className="mb-2 p-2">
+                    <p className="text-xs">
+                      Filenames were automatically adjusted to meet requirements
+                      (spaces → underscores, special characters removed)
+                    </p>
+                  </Alert>
+                )}
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {Array.from(uploadedFiles.entries()).map(
+                    ([path, content]) => (
+                      <div
+                        key={path}
+                        className="flex items-center justify-between text-xs p-1 rounded bg-muted/50"
+                      >
+                        <span className="font-mono truncate" title={path}>
+                          {path}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">
+                            {Math.ceil((content.length * 0.75) / 1024)}KB
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(path)}
+                            className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
