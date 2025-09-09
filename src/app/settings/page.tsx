@@ -14,11 +14,9 @@ import {
   User,
   Calendar,
   RefreshCw,
-  TrendingUp,
-  Calculator,
   DollarSign,
 } from 'lucide-react';
-import { Account, WorkloadTier, WorkloadResponse } from '@/lib/nilcc-types';
+import { Account, WorkloadResponse } from '@/lib/nilcc-types';
 import Link from 'next/link';
 
 export default function SettingsPage() {

@@ -62,11 +62,11 @@ export default function DockerComposeHash({
             <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-black/90 text-white rounded-md shadow-xl z-50 backdrop-blur-sm">
               <p className="text-xs leading-relaxed">
                 <strong className="block mb-1">What is this?</strong>
-                The SHA256 hash of your Docker Compose. It's calculated from the
+                The SHA256 hash of your Docker Compose. It&apos;s calculated from the
                 Docker Compose file shown above.
               </p>
               <p className="text-xs leading-relaxed mt-2">
-                <strong className="block mb-1">What's included?</strong>
+                <strong className="block mb-1">What&apos;s included?</strong>
                 Only the Docker Compose file content. Environment variables,
                 files, and other workload settings are NOT included in this
                 hash.

@@ -352,7 +352,10 @@ export default function CreateWorkloadPage() {
     }
 
     if (fileList.length > 0) {
-      handleFileSelect(fileList as any);
+      // Create a DataTransfer object to properly convert File[] to FileList
+      const dataTransfer = new DataTransfer();
+      fileList.forEach(file => dataTransfer.items.add(file));
+      handleFileSelect(dataTransfer.files);
     }
   };
 
@@ -808,7 +811,7 @@ export default function CreateWorkloadPage() {
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    // @ts-ignore - webkitdirectory is a non-standard attribute
+                    // @ts-expect-error - webkitdirectory is a non-standard attribute
                     webkitdirectory="true"
                     multiple
                     onChange={(e) =>
