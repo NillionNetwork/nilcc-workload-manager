@@ -41,6 +41,8 @@ import {
   RotateCw,
   Activity,
   Loader2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export default function WorkloadDetailPage() {
@@ -74,6 +76,7 @@ export default function WorkloadDetailPage() {
   const [logsError, setLogsError] = useState<string | null>(null);
   const [tailLogs, setTailLogs] = useState(true);
   const [copiedCompose, setCopiedCompose] = useState(false);
+  const [showEnvValues, setShowEnvValues] = useState(false);
 
   // Action state
   const [confirmModal, setConfirmModal] = useState<{
@@ -837,9 +840,29 @@ export default function WorkloadDetailPage() {
               {workload.envVars && Object.keys(workload.envVars).length > 0 && (
                 <Card>
                   <CardContent>
-                    <h4 className="text-lg font-semibold text-card-foreground mb-4">
-                      Environment Variables
-                    </h4>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-card-foreground">
+                        Environment Variables
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowEnvValues(!showEnvValues)}
+                        className="text-xs"
+                      >
+                        {showEnvValues ? (
+                          <>
+                            <EyeOff className="h-3 w-3 mr-1" />
+                            Hide Values
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3 mr-1" />
+                            Show Values
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     <div className="space-y-2">
                       {Object.entries(workload.envVars).map(([key, value]) => (
                         <div key={key} className="flex items-center space-x-2">
@@ -848,8 +871,40 @@ export default function WorkloadDetailPage() {
                           </code>
                           <span className="text-muted-foreground">=</span>
                           <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
-                            {value}
+                            {showEnvValues ? value : '••••••••'}
                           </code>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Files Section */}
+              {workload.files && Object.keys(workload.files).length > 0 && (
+                <Card>
+                  <CardContent>
+                    <h4 className="text-lg font-semibold text-card-foreground mb-4">
+                      Mounted Files
+                    </h4>
+                    <div className="space-y-3">
+                      {Object.entries(workload.files).map(([path, content]) => (
+                        <div key={path} className="border border-border rounded-md p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <code className="text-sm font-mono text-foreground">
+                                {path}
+                              </code>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {Math.ceil(content.length * 0.75 / 1024)}KB
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <p>Mounted at: <code className="text-xs bg-muted px-1 rounded">$FILES/{path}</code></p>
+                            <p className="mt-1">Use in docker-compose: <code className="text-xs bg-muted px-1 rounded">- $FILES/{path}:/path/in/container</code></p>
+                          </div>
                         </div>
                       ))}
                     </div>

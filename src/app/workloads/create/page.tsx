@@ -747,19 +747,61 @@ export default function CreateWorkloadPage() {
                     : undefined,
               }}
             >
-              <label className="cursor-pointer block">
-                <Input
-                  type="file"
-                  multiple
-                  onChange={(e) =>
-                    e.target.files && handleFileSelect(e.target.files)
-                  }
-                  className="hidden"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Drop files/folders here or click to browse
-                </p>
-              </label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Drop files or folders here
+              </p>
+              <div className="flex gap-2 justify-center">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) =>
+                      e.target.files && handleFileSelect(e.target.files)
+                    }
+                    className="hidden"
+                    style={{ display: 'none' }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs px-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                      input?.click();
+                    }}
+                  >
+                    Select Files
+                  </Button>
+                </label>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    // @ts-ignore - webkitdirectory is a non-standard attribute
+                    webkitdirectory="true"
+                    multiple
+                    onChange={(e) =>
+                      e.target.files && handleFileSelect(e.target.files)
+                    }
+                    className="hidden"
+                    style={{ display: 'none' }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs px-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                      input?.click();
+                    }}
+                  >
+                    Select Folder
+                  </Button>
+                </label>
+              </div>
             </div>
 
             {/* File list */}
