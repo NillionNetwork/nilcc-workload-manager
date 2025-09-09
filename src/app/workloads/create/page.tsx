@@ -12,12 +12,13 @@ import {
   Textarea,
   Alert,
 } from '@/components/ui';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   CreateWorkloadRequest,
   WorkloadTier,
   DockerCredential,
 } from '@/lib/nilcc-types';
+import DockerComposeHash from '@/components/DockerComposeHash';
 
 export default function CreateWorkloadPage() {
   const router = useRouter();
@@ -63,6 +64,9 @@ export default function CreateWorkloadPage() {
     new Map()
   );
   const [filenameSanitized, setFilenameSanitized] = useState(false);
+
+  // Docker Compose Hash visibility
+  const [showDockerHash, setShowDockerHash] = useState(false);
 
   // Get selected tier details
   const selectedTier = tiers.find((t) => t.tierId === selectedTierId);
@@ -636,6 +640,29 @@ export default function CreateWorkloadPage() {
                     />
                   </div>
                 </div>
+
+                {dockerCompose && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDockerHash(!showDockerHash)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                    >
+                      {showDockerHash ? (
+                        <ChevronDown className="h-3 w-3" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
+                      Show Docker Compose Hash
+                    </button>
+                    {showDockerHash && (
+                      <DockerComposeHash
+                        dockerCompose={dockerCompose}
+                        className="mt-2"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -768,7 +795,10 @@ export default function CreateWorkloadPage() {
                     className="h-6 text-xs px-2"
                     onClick={(e) => {
                       e.preventDefault();
-                      const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                      const input =
+                        e.currentTarget.parentElement?.querySelector(
+                          'input[type="file"]'
+                        ) as HTMLInputElement;
                       input?.click();
                     }}
                   >
@@ -794,7 +824,10 @@ export default function CreateWorkloadPage() {
                     className="h-6 text-xs px-2"
                     onClick={(e) => {
                       e.preventDefault();
-                      const input = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                      const input =
+                        e.currentTarget.parentElement?.querySelector(
+                          'input[type="file"]'
+                        ) as HTMLInputElement;
                       input?.click();
                     }}
                   >

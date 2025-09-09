@@ -21,6 +21,7 @@ import {
   SystemStats,
 } from '@/lib/nilcc-types';
 import WorkloadStats from '@/components/WorkloadStats';
+import DockerComposeHash from '@/components/DockerComposeHash';
 import {
   ExternalLink,
   Trash2,
@@ -832,6 +833,7 @@ export default function WorkloadDetailPage() {
                     <pre className="bg-muted border border-border rounded p-4 text-sm overflow-x-auto text-foreground">
                       <code>{workload.dockerCompose}</code>
                     </pre>
+                    <DockerComposeHash dockerCompose={workload.dockerCompose} className="mt-2" />
                   </div>
                 </CardContent>
               </Card>
