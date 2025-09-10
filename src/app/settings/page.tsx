@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useError } from '@/contexts/ErrorContext';
 import { Card, CardContent, Button, Input, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
 import {
@@ -22,13 +23,13 @@ import Link from 'next/link';
 export default function SettingsPage() {
   const { apiKey, apiBaseUrl, setApiKey, setApiBaseUrl, clearApiKey, client } =
     useSettings();
+  const { addError } = useError();
   const [newApiKey, setNewApiKey] = useState('');
   const [newApiBaseUrl, setNewApiBaseUrl] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
-  const [accountError, setAccountError] = useState<string | null>(null);
   const [workloads, setWorkloads] = useState<WorkloadResponse[]>([]);
   const [workloadsLoading, setWorkloadsLoading] = useState(false);
 
@@ -69,16 +70,22 @@ export default function SettingsPage() {
       if (!client || !apiKey) return;
 
       setAccountLoading(true);
-      setAccountError(null);
 
       try {
         const accountData = await client.getAccount();
         setAccount(accountData);
       } catch (error) {
         console.error('Failed to fetch account:', error);
-        // Don't show error message, just fail silently
-        // This handles invalid API keys gracefully
-        setAccountError('Unable to fetch account information');
+        if (error instanceof Error) {
+          const errorWithResponse = error as Error & {
+            response?: { data?: { errors?: string[]; error?: string }; status?: number };
+          };
+          const errorMessage = errorWithResponse.response?.data?.error || 
+            errorWithResponse.response?.data?.errors?.[0] ||
+            error.message ||
+            'Unable to fetch account information';
+          addError(`Failed to fetch account information: ${errorMessage}`, errorWithResponse.response?.status);
+        }
       } finally {
         setAccountLoading(false);
       }
@@ -90,7 +97,7 @@ export default function SettingsPage() {
   // Fetch workloads for credit usage history
   useEffect(() => {
     const loadWorkloads = async () => {
-      if (!client || !apiKey) return;
+      if (!client || !apiKey || !account?.accountId) return;
 
       setWorkloadsLoading(true);
       try {
@@ -98,28 +105,44 @@ export default function SettingsPage() {
         setWorkloads(workloadData);
       } catch (error) {
         console.error('Failed to fetch workloads:', error);
+        if (error instanceof Error) {
+          const errorWithResponse = error as Error & {
+            response?: { data?: { errors?: string[]; error?: string }; status?: number };
+          };
+          const errorMessage = errorWithResponse.response?.data?.error || 
+            errorWithResponse.response?.data?.errors?.[0] ||
+            error.message ||
+            'Unable to fetch workloads';
+          addError(`Failed to fetch workloads for credit usage: ${errorMessage}`, errorWithResponse.response?.status);
+        }
       } finally {
         setWorkloadsLoading(false);
       }
     };
 
     loadWorkloads();
-  }, [client, apiKey]);
+  }, [client, apiKey, account?.accountId]);
 
   const fetchAccount = async () => {
     if (!client) return;
 
     setAccountLoading(true);
-    setAccountError(null);
 
     try {
       const accountData = await client.getAccount();
       setAccount(accountData);
     } catch (error) {
       console.error('Failed to fetch account:', error);
-      // Don't show error message, just fail silently
-      // This handles invalid API keys gracefully
-      setAccountError('Unable to fetch account information');
+      if (error instanceof Error) {
+        const errorWithResponse = error as Error & {
+          response?: { data?: { errors?: string[]; error?: string }; status?: number };
+        };
+        const errorMessage = errorWithResponse.response?.data?.error || 
+          errorWithResponse.response?.data?.errors?.[0] ||
+          error.message ||
+          'Unable to fetch account information';
+        addError(`Failed to refresh account information: ${errorMessage}`, errorWithResponse.response?.status);
+      }
     } finally {
       setAccountLoading(false);
     }
@@ -272,7 +295,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Account Information */}
-      {apiKey && !accountError && (
+      {apiKey && account?.accountId && (
         <Card>
           <CardContent className="py-1">
             <div className="flex items-center justify-between mb-3">

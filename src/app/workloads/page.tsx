@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useError } from '@/contexts/ErrorContext';
 import { Card, CardContent, Button, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
 import { WorkloadResponse } from '@/lib/nilcc-types';
@@ -16,30 +17,29 @@ import {
 
 export default function WorkloadsPage() {
   const { client, apiKey } = useSettings();
+  const { addError } = useError();
   const [workloads, setWorkloads] = useState<WorkloadResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchWorkloads = useCallback(async () => {
     if (!client) return;
 
     try {
       setLoading(true);
-      setError(null);
       const data = await client.listWorkloads();
       setWorkloads(data);
     } catch (err) {
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[] } };
+          response?: { data?: { errors?: string[]; error?: string }; status?: number };
         };
-        setError(
+        const errorMessage = errorWithResponse.response?.data?.error || 
           errorWithResponse.response?.data?.errors?.[0] ||
-            err.message ||
-            'Failed to fetch workloads'
-        );
+          err.message ||
+          'Failed to fetch workloads';
+        addError(`Failed to fetch workloads: ${errorMessage}`, errorWithResponse.response?.status);
       } else {
-        setError('Failed to fetch workloads');
+        addError('Failed to fetch workloads');
       }
     } finally {
       setLoading(false);
@@ -109,16 +109,8 @@ export default function WorkloadsPage() {
         </div>
       </div>
 
-      {/* Error State */}
-      {error && (
-        <Alert variant="danger">
-          <p className="font-medium">Failed to load workloads</p>
-          <p className="text-sm mt-1">{error}</p>
-        </Alert>
-      )}
-
       {/* Loading State */}
-      {loading && !error && (
+      {loading && (
         <Card>
           <CardContent>
             <div className="flex items-center justify-center py-12">
@@ -132,7 +124,7 @@ export default function WorkloadsPage() {
       )}
 
       {/* Empty State */}
-      {!loading && !error && workloads.length === 0 && (
+      {!loading && workloads.length === 0 && (
         <Card>
           <CardContent>
             <div className="text-center py-12">
@@ -155,7 +147,7 @@ export default function WorkloadsPage() {
       )}
 
       {/* Workloads Grid */}
-      {!loading && !error && workloads.length > 0 && (
+      {!loading && workloads.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workloads.map((workload) => (
             <Card

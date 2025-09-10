@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useError } from '@/contexts/ErrorContext';
 import {
   Card,
   CardContent,
@@ -50,9 +51,9 @@ export default function WorkloadDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { client, apiKey } = useSettings();
+  const { addError } = useError();
   const [workload, setWorkload] = useState<WorkloadResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Buffer time to allow backend to update status after actions
   const backendBufferTime = 3000; // 3 seconds
@@ -74,7 +75,6 @@ export default function WorkloadDetailPage() {
   const [containerLogsLoading, setContainerLogsLoading] = useState<
     Record<'stdout' | 'stderr', boolean>
   >({ stdout: false, stderr: false });
-  const [logsError, setLogsError] = useState<string | null>(null);
   const [tailLogs, setTailLogs] = useState(true);
   const [copiedCompose, setCopiedCompose] = useState(false);
   const [showEnvValues, setShowEnvValues] = useState(false);
@@ -97,7 +97,6 @@ export default function WorkloadDetailPage() {
   // Stats state
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [statsError, setStatsError] = useState<string | null>(null);
 
   // Ref for auto-scrolling logs
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -117,21 +116,27 @@ export default function WorkloadDetailPage() {
         if (showLoader) {
           setLoading(true);
         }
-        setError(null);
         const data = await client.getWorkload(id as string);
         setWorkload(data);
       } catch (err) {
         if (err instanceof Error) {
           const errorWithResponse = err as Error & {
-            response?: { data?: { errors?: string[] } };
+            response?: {
+              data?: { errors?: string[]; error?: string };
+              status?: number;
+            };
           };
-          setError(
+          const errorMessage =
+            errorWithResponse.response?.data?.error ||
             errorWithResponse.response?.data?.errors?.[0] ||
-              err.message ||
-              'Failed to fetch workload details'
+            err.message ||
+            'Failed to fetch workload details';
+          addError(
+            `Failed to fetch workload details: ${errorMessage}`,
+            errorWithResponse.response?.status
           );
         } else {
-          setError('Failed to fetch workload details');
+          addError('Failed to fetch workload details');
         }
       } finally {
         if (showLoader) {
@@ -156,6 +161,23 @@ export default function WorkloadDetailPage() {
       );
     } catch (err) {
       console.error('Failed to fetch events:', err);
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & {
+          response?: {
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
+        };
+        const errorMessage =
+          errorWithResponse.response?.data?.error ||
+          errorWithResponse.response?.data?.errors?.[0] ||
+          err.message ||
+          'Failed to fetch events';
+        addError(
+          `Failed to fetch workload events: ${errorMessage}`,
+          errorWithResponse.response?.status
+        );
+      }
     } finally {
       setEventsLoading(false);
     }
@@ -177,6 +199,23 @@ export default function WorkloadDetailPage() {
       }
     } catch (err) {
       console.error('Failed to fetch containers:', err);
+      if (err instanceof Error) {
+        const errorWithResponse = err as Error & {
+          response?: {
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
+        };
+        const errorMessage =
+          errorWithResponse.response?.data?.error ||
+          errorWithResponse.response?.data?.errors?.[0] ||
+          err.message ||
+          'Failed to fetch containers';
+        addError(
+          `Failed to fetch containers: ${errorMessage}`,
+          errorWithResponse.response?.status
+        );
+      }
     }
   }, [client, id, selectedContainer, stoppingWorkload, startingWorkload]);
 
@@ -194,7 +233,6 @@ export default function WorkloadDetailPage() {
 
     try {
       setSystemLogsLoading(true);
-      setLogsError(null);
       const response = await client.getSystemLogs({
         workloadId: id as string,
         tail: tailLogs,
@@ -210,14 +248,17 @@ export default function WorkloadDetailPage() {
         };
         // Handle 500 errors gracefully - logs might not be available during transitions
         if (errorWithResponse.response?.status === 500) {
-          setLogsError(null);
           setSystemLogs([]);
           // Don't show error for 500s, just show empty logs
         } else {
-          setLogsError(err.message);
+          const errorMessage = err.message || 'Failed to fetch system logs';
+          addError(
+            `Failed to fetch system logs: ${errorMessage}`,
+            errorWithResponse.response?.status
+          );
         }
       } else {
-        setLogsError('Failed to fetch system logs');
+        addError('Failed to fetch system logs');
       }
     } finally {
       setSystemLogsLoading(false);
@@ -250,7 +291,6 @@ export default function WorkloadDetailPage() {
 
       try {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: true }));
-        setLogsError(null);
         const response = await client.getContainerLogs({
           workloadId: id as string,
           container: containerName,
@@ -274,7 +314,6 @@ export default function WorkloadDetailPage() {
           };
           // Handle 500 errors gracefully
           if (errorWithResponse.response?.status === 500) {
-            setLogsError(null);
             setContainerLogs((prev) => ({
               ...prev,
               [containerName]: {
@@ -283,10 +322,15 @@ export default function WorkloadDetailPage() {
               },
             }));
           } else {
-            setLogsError(err.message);
+            const errorMessage =
+              err.message || 'Failed to fetch container logs';
+            addError(
+              `Failed to fetch container logs: ${errorMessage}`,
+              errorWithResponse.response?.status
+            );
           }
         } else {
-          setLogsError('Failed to fetch container logs');
+          addError('Failed to fetch container logs');
         }
       } finally {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
@@ -323,15 +367,28 @@ export default function WorkloadDetailPage() {
 
     try {
       setStatsLoading(true);
-      setStatsError(null);
       const data = await client.getWorkloadStats(id as string);
       setStats(data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
       if (err instanceof Error) {
-        setStatsError(err.message);
+        const errorWithResponse = err as Error & {
+          response?: {
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
+        };
+        const errorMessage =
+          errorWithResponse.response?.data?.error ||
+          errorWithResponse.response?.data?.errors?.[0] ||
+          err.message ||
+          'Failed to fetch system stats';
+        addError(
+          `Failed to fetch workload stats: ${errorMessage}`,
+          errorWithResponse.response?.status
+        );
       } else {
-        setStatsError('Failed to fetch system stats');
+        addError('Failed to fetch workload stats');
       }
     } finally {
       setStatsLoading(false);
@@ -441,12 +498,17 @@ export default function WorkloadDetailPage() {
     if (
       !client ||
       !id ||
-      (workload?.status !== 'starting' && workload?.status !== 'scheduled' && workload?.status !== 'awaitingCert')
+      (workload?.status !== 'starting' &&
+        workload?.status !== 'scheduled' &&
+        workload?.status !== 'awaitingCert')
     )
       return;
 
     // Different intervals for different states
-    const refreshInterval = (workload?.status === 'scheduled' || workload?.status === 'awaitingCert') ? 3000 : 15000;
+    const refreshInterval =
+      workload?.status === 'scheduled' || workload?.status === 'awaitingCert'
+        ? 3000
+        : 15000;
 
     const interval = setInterval(() => {
       fetchWorkload(false); // Don't show loader for auto-refresh
@@ -486,13 +548,17 @@ export default function WorkloadDetailPage() {
         const errorWithResponse = err as Error & {
           response?: { data?: { errors?: string[] } };
         };
-        alert(
-          `Failed to start workload: ${
-            errorWithResponse.response?.data?.errors?.[0] || err.message
-          }`
+        const errorMessage =
+          errorWithResponse.response?.data?.error ||
+          errorWithResponse.response?.data?.errors?.[0] ||
+          err.message ||
+          'Failed to start workload';
+        addError(
+          `Failed to start workload: ${errorMessage}`,
+          errorWithResponse.response?.status
         );
       } else {
-        alert('Failed to start workload');
+        addError('Failed to start workload');
       }
     }
   };
@@ -538,7 +604,6 @@ export default function WorkloadDetailPage() {
           setSystemLogs([]);
           setContainers([]);
           setContainerLogs({});
-          setLogsError(null);
           // Clear selected container to prevent container logs fetch
           setSelectedContainer('');
           // Wait for backend to update status
@@ -586,13 +651,17 @@ export default function WorkloadDetailPage() {
         const errorWithResponse = err as Error & {
           response?: { data?: { errors?: string[] } };
         };
-        alert(
-          `Failed to ${confirmModal.action} workload: ${
-            errorWithResponse.response?.data?.errors?.[0] || err.message
-          }`
+        const errorMessage =
+          errorWithResponse.response?.data?.error ||
+          errorWithResponse.response?.data?.errors?.[0] ||
+          err.message ||
+          `Failed to ${confirmModal.action} workload`;
+        addError(
+          `Failed to ${confirmModal.action} workload: ${errorMessage}`,
+          errorWithResponse.response?.status
         );
       } else {
-        alert(`Failed to ${confirmModal.action} workload`);
+        addError(`Failed to ${confirmModal.action} workload`);
       }
     }
   };
@@ -662,16 +731,8 @@ export default function WorkloadDetailPage() {
         </Button>
       </div>
 
-      {/* Error State */}
-      {error && (
-        <Alert variant="danger">
-          <p className="font-medium">Failed to load workload details</p>
-          <p className="text-sm mt-1">{error}</p>
-        </Alert>
-      )}
-
       {/* Loading State */}
-      {loading && !error && (
+      {loading && (
         <Card>
           <CardContent>
             <div className="flex items-center justify-center py-12">
@@ -685,7 +746,7 @@ export default function WorkloadDetailPage() {
       )}
 
       {/* Workload Details */}
-      {!loading && !error && workload && (
+      {!loading && workload && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Info */}
@@ -700,7 +761,8 @@ export default function WorkloadDetailPage() {
                     <div className="flex items-center space-x-2">
                       <Badge variant={getStatusVariant(workload.status)}>
                         <span className="flex items-center gap-1">
-                          {(workload.status === 'starting' || workload.status === 'awaitingCert') && (
+                          {(workload.status === 'starting' ||
+                            workload.status === 'awaitingCert') && (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           )}
                           {workload.status}
@@ -833,7 +895,10 @@ export default function WorkloadDetailPage() {
                     <pre className="bg-muted border border-border rounded p-4 text-sm overflow-x-auto text-foreground">
                       <code>{workload.dockerCompose}</code>
                     </pre>
-                    <DockerComposeHash dockerCompose={workload.dockerCompose} className="mt-2" />
+                    <DockerComposeHash
+                      dockerCompose={workload.dockerCompose}
+                      className="mt-2"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -891,7 +956,10 @@ export default function WorkloadDetailPage() {
                     </h4>
                     <div className="space-y-3">
                       {Object.entries(workload.files).map(([path, content]) => (
-                        <div key={path} className="border border-border rounded-md p-3">
+                        <div
+                          key={path}
+                          className="border border-border rounded-md p-3"
+                        >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2">
                               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -900,12 +968,22 @@ export default function WorkloadDetailPage() {
                               </code>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {Math.ceil(content.length * 0.75 / 1024)}KB
+                              {Math.ceil((content.length * 0.75) / 1024)}KB
                             </div>
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            <p>Mounted at: <code className="text-xs bg-muted px-1 rounded">$FILES/{path}</code></p>
-                            <p className="mt-1">Use in docker-compose: <code className="text-xs bg-muted px-1 rounded">- $FILES/{path}:/path/in/container</code></p>
+                            <p>
+                              Mounted at:{' '}
+                              <code className="text-xs bg-muted px-1 rounded">
+                                $FILES/{path}
+                              </code>
+                            </p>
+                            <p className="mt-1">
+                              Use in docker-compose:{' '}
+                              <code className="text-xs bg-muted px-1 rounded">
+                                - $FILES/{path}:/path/in/container
+                              </code>
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -1166,8 +1244,6 @@ export default function WorkloadDetailPage() {
                           </p>
                         </div>
                       </div>
-                    ) : logsError ? (
-                      <div className="text-destructive">Error: {logsError}</div>
                     ) : (activeLogsTab === 'system' && systemLogsLoading) ||
                       (activeLogsTab === 'container' &&
                         containerLogsLoading[activeStreamTab]) ? (
@@ -1344,7 +1420,7 @@ export default function WorkloadDetailPage() {
                 <WorkloadStats
                   stats={stats}
                   loading={statsLoading}
-                  error={statsError}
+                  error={null}
                 />
               )}
 

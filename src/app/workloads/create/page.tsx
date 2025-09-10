@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useError } from '@/contexts/ErrorContext';
 import {
   Card,
   CardContent,
@@ -23,15 +24,14 @@ import DockerComposeHash from '@/components/DockerComposeHash';
 export default function CreateWorkloadPage() {
   const router = useRouter();
   const { client, apiKey } = useSettings();
+  const { addError } = useError();
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [availableServices, setAvailableServices] = useState<string[]>([]);
 
   // Tier state
   const [tiers, setTiers] = useState<WorkloadTier[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
   const [loadingTiers, setLoadingTiers] = useState(true);
-  const [tiersError, setTiersError] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -83,11 +83,21 @@ export default function CreateWorkloadPage() {
           if (fetchedTiers.length === 1) {
             setSelectedTierId(fetchedTiers[0].tierId);
           }
-          setTiersError(null);
         })
         .catch((err) => {
           console.error('Failed to fetch tiers:', err);
-          setTiersError('Failed to load available tiers. Please try again.');
+          if (err instanceof Error) {
+            const errorWithResponse = err as Error & {
+              response?: { data?: { errors?: string[]; error?: string }; status?: number };
+            };
+            const errorMessage = errorWithResponse.response?.data?.error || 
+              errorWithResponse.response?.data?.errors?.[0] ||
+              err.message ||
+              'Failed to load available tiers';
+            addError(`Failed to load workload tiers: ${errorMessage}`, errorWithResponse.response?.status);
+          } else {
+            addError('Failed to load available workload tiers');
+          }
         })
         .finally(() => {
           setLoadingTiers(false);
@@ -175,13 +185,12 @@ export default function CreateWorkloadPage() {
 
     // Validate Docker image
     if (dockerImageError) {
-      setError(dockerImageError);
+      addError(dockerImageError);
       return;
     }
 
     try {
       setCreating(true);
-      setError(null);
 
       // Convert env vars to object
       const envVarsObject: { [key: string]: string } = {};
@@ -232,15 +241,26 @@ export default function CreateWorkloadPage() {
     } catch (err) {
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[] } };
+          response?: { 
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
         };
-        setError(
-          errorWithResponse.response?.data?.errors?.[0] ||
-            err.message ||
-            'Failed to create workload'
-        );
+        
+        // Try to extract error from different possible structures
+        let errorMessage = 'Failed to create workload';
+        
+        if (errorWithResponse.response?.data?.error) {
+          errorMessage = errorWithResponse.response.data.error;
+        } else if (errorWithResponse.response?.data?.errors?.[0]) {
+          errorMessage = errorWithResponse.response.data.errors[0];
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        addError(`Failed to create workload: ${errorMessage}`, errorWithResponse.response?.status);
       } else {
-        setError('Failed to create workload');
+        addError('Failed to create workload');
       }
     } finally {
       setCreating(false);
@@ -396,14 +416,6 @@ export default function CreateWorkloadPage() {
         </h2>
       </div>
 
-      {/* Error */}
-      {error && (
-        <Alert variant="danger">
-          <p className="font-medium">Failed to create workload</p>
-          <p className="text-sm mt-1">{error}</p>
-        </Alert>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-2">
         {/* Combined Basic Info and Tier Selection */}
         <Card className="my-4">
@@ -443,7 +455,7 @@ export default function CreateWorkloadPage() {
                     Loading tiers...
                   </p>
                 )}
-                {!loadingTiers && !tiersError && tiers.length > 0 && (
+                {!loadingTiers && tiers.length > 0 && (
                   <div className="mt-0.5">
                     {/* Always show as radio buttons for consistency */}
                     {tiers.map((tier) => (
@@ -474,7 +486,7 @@ export default function CreateWorkloadPage() {
                     ))}
                   </div>
                 )}
-                {!loadingTiers && !tiersError && tiers.length === 0 && (
+                {!loadingTiers && tiers.length === 0 && (
                   <Alert variant="warning" className=" px-2 mt-0.5">
                     <p className="text-xs">No tiers available</p>
                   </Alert>

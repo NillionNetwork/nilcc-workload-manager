@@ -22,8 +22,29 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      let errorMessage = errorText;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.error) {
+          // Check if errorData.error is a string that needs to be parsed
+          if (typeof errorData.error === 'string' && errorData.error.startsWith('{')) {
+            const nestedError = JSON.parse(errorData.error);
+            errorMessage = nestedError.error || errorData.error;
+          } else if (typeof errorData.error === 'object') {
+            // If it's already an object, extract the error field
+            errorMessage = errorData.error.error || JSON.stringify(errorData.error);
+          } else {
+            // If it's just a string, use it directly
+            errorMessage = errorData.error;
+          }
+        }
+      } catch (e) {
+        // If parsing fails, use the original error text
+      }
+      
       return NextResponse.json(
-        { error: errorText },
+        { error: errorMessage },
         { status: response.status }
       );
     }
