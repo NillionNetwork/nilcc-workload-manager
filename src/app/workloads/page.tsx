@@ -44,7 +44,7 @@ export default function WorkloadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [client]);
+  }, [client, addError]);
 
   useEffect(() => {
     if (client) {

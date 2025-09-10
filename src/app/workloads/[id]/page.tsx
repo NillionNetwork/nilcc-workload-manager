@@ -144,7 +144,7 @@ export default function WorkloadDetailPage() {
         }
       }
     },
-    [client, id]
+    [client, id, addError]
   );
 
   const fetchEvents = useCallback(async () => {
@@ -181,7 +181,7 @@ export default function WorkloadDetailPage() {
     } finally {
       setEventsLoading(false);
     }
-  }, [client, id]);
+  }, [client, id, addError]);
 
   const fetchContainers = useCallback(async () => {
     if (!client || !id || stoppingWorkload || startingWorkload) return;
@@ -217,7 +217,7 @@ export default function WorkloadDetailPage() {
         );
       }
     }
-  }, [client, id, selectedContainer, stoppingWorkload, startingWorkload]);
+  }, [client, id, selectedContainer, stoppingWorkload, startingWorkload, addError]);
 
   const fetchSystemLogs = useCallback(async () => {
     if (!client || !id || stoppingWorkload || startingWorkload) return;
@@ -271,6 +271,7 @@ export default function WorkloadDetailPage() {
     stoppingWorkload,
     startingWorkload,
     workload,
+    addError,
   ]);
 
   const fetchContainerLogs = useCallback(
@@ -336,7 +337,7 @@ export default function WorkloadDetailPage() {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
       }
     },
-    [client, id, tailLogs, scrollToBottom, workload]
+    [client, id, tailLogs, scrollToBottom, workload, addError]
   );
 
   const refreshLogs = useCallback(() => {
@@ -393,7 +394,7 @@ export default function WorkloadDetailPage() {
     } finally {
       setStatsLoading(false);
     }
-  }, [client, id, workload]);
+  }, [client, id, workload, addError]);
 
   useEffect(() => {
     if (client && id) {
@@ -546,7 +547,7 @@ export default function WorkloadDetailPage() {
       setStartingWorkload(false);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[] } };
+          response?: { data?: { errors?: string[]; error?: string }; status?: number };
         };
         const errorMessage =
           errorWithResponse.response?.data?.error ||
@@ -649,7 +650,7 @@ export default function WorkloadDetailPage() {
       setActionInProgress(false);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[] } };
+          response?: { data?: { errors?: string[]; error?: string }; status?: number };
         };
         const errorMessage =
           errorWithResponse.response?.data?.error ||

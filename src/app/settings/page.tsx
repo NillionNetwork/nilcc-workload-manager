@@ -92,7 +92,7 @@ export default function SettingsPage() {
     };
 
     loadAccount();
-  }, [client, apiKey]);
+  }, [client, apiKey, addError]);
 
   // Fetch workloads for credit usage history
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function SettingsPage() {
     };
 
     loadWorkloads();
-  }, [client, apiKey, account?.accountId]);
+  }, [client, apiKey, account?.accountId, addError]);
 
   const fetchAccount = async () => {
     if (!client) return;

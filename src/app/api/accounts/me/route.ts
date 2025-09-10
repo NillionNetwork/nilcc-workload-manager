@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
             errorMessage = errorData.error;
           }
         }
-      } catch (e) {
+      } catch {
         // If parsing fails, use the original error text
       }
       

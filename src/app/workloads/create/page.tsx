@@ -103,7 +103,7 @@ export default function CreateWorkloadPage() {
           setLoadingTiers(false);
         });
     }
-  }, [client, apiKey]);
+  }, [client, apiKey, addError]);
 
   // Validation
   const validateDockerImage = (image: string): string | null => {
