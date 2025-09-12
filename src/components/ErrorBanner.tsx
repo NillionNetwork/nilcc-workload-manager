@@ -13,7 +13,7 @@ export const ErrorBanner: React.FC = () => {
       const timer = setTimeout(() => {
         removeError(error.id);
       }, 10000);
-      
+
       return () => clearTimeout(timer);
     });
   }, [errors, removeError]);
@@ -34,47 +34,49 @@ export const ErrorBanner: React.FC = () => {
   if (errors.length === 0) return null;
 
   return (
-    <div 
+    <div
       className="fixed left-0 right-0 z-50"
       style={{
         top: isNavbarVisible ? '64px' : '0',
-        transition: 'top 0.3s ease'
+        transition: 'top 0.3s ease',
       }}
     >
-      {errors.map((error) => (
-        <div
-          key={error.id}
-          className="bg-red-600 text-white px-4 py-3 shadow-lg animate-slide-down"
-        >
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex-1">
-              <p className="font-medium">
-                Error {error.status && `[${error.status}]`}
-              </p>
-              <p className="text-sm mt-1">{error.message}</p>
-            </div>
-            <button
-              onClick={() => removeError(error.id)}
-              className="ml-4 p-1 rounded hover:bg-red-700 transition-colors"
-              aria-label="Dismiss error"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      {errors
+        .filter((error) => error.status !== 404)
+        .map((error) => (
+          <div
+            key={error.id}
+            className="bg-red-600 text-white px-4 py-3 shadow-lg animate-slide-down"
+          >
+            <div className="flex items-center justify-between max-w-7xl mx-auto">
+              <div className="flex-1">
+                <p className="font-medium">
+                  Error {error.status && `[${error.status}]`}
+                </p>
+                <p className="text-sm mt-1">{error.message}</p>
+              </div>
+              <button
+                onClick={() => removeError(error.id)}
+                className="ml-4 p-1 rounded hover:bg-red-700 transition-colors"
+                aria-label="Dismiss error"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 };

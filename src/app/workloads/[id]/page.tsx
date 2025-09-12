@@ -149,7 +149,7 @@ export default function WorkloadDetailPage() {
   );
 
   const fetchEvents = useCallback(async () => {
-    if (!client || !id ) return;
+    if (!client || !id) return;
 
     try {
       setEventsLoading(true);
@@ -185,7 +185,7 @@ export default function WorkloadDetailPage() {
   }, [client, id, addError]);
 
   const fetchContainers = useCallback(async () => {
-    if (!client || !id || stoppingWorkload || startingWorkload ) return;
+    if (!client || !id || stoppingWorkload || startingWorkload) return;
 
     try {
       const containerList = await client.listContainers(id as string);
@@ -218,123 +218,135 @@ export default function WorkloadDetailPage() {
         );
       }
     }
-  }, [client, id, selectedContainer, stoppingWorkload, startingWorkload, addError]);
-
-  const fetchSystemLogs = useCallback(async (showLoader = true) => {
-    if (!client || !id || stoppingWorkload || startingWorkload ) return;
-
-    // Don't fetch logs unless status is awaitingCert or running
-    if (
-      !workload ||
-      (workload.status !== 'awaitingCert' && workload.status !== 'running')
-    ) {
-      setSystemLogs([]);
-      return;
-    }
-
-    try {
-      if (showLoader) {
-        setSystemLogsLoading(true);
-      }
-      const response = await client.getSystemLogs({
-        workloadId: id as string,
-        tail: tailLogs,
-        maxLines: 100,
-      });
-      
-      // For non-loader updates (auto-refresh), only update if there are changes
-      if (!showLoader) {
-        setSystemLogs((prevLogs) => {
-          // If we have no previous logs, use the new ones
-          if (prevLogs.length === 0) {
-            if (response.lines.length > 0) {
-              setTimeout(scrollToBottom, 100);
-            }
-            return response.lines;
-          }
-          
-          // If the new response has fewer lines, the logs were cleared/rotated
-          if (response.lines.length < prevLogs.length) {
-            return response.lines;
-          }
-          
-          // Check if the logs are actually different by comparing the last few lines
-          const prevLastIndex = prevLogs.length - 1;
-          const newLastIndex = response.lines.length - 1;
-          
-          // If the last line of previous logs matches a line in the new logs,
-          // we can determine where to slice from
-          if (prevLastIndex >= 0 && newLastIndex >= 0) {
-            const prevLastLine = prevLogs[prevLastIndex];
-            
-            // Find where the previous logs end in the new logs
-            let matchIndex = -1;
-            for (let i = 0; i <= newLastIndex; i++) {
-              if (response.lines[i] === prevLastLine) {
-                matchIndex = i;
-              }
-            }
-            
-            if (matchIndex >= 0 && matchIndex < newLastIndex) {
-              // We found where old logs end, append only the new ones
-              const newLogs = response.lines.slice(matchIndex + 1);
-              setTimeout(scrollToBottom, 100);
-              return [...prevLogs, ...newLogs];
-            }
-          }
-          
-          // If we can't determine the overlap, check if content is exactly the same
-          const sameLength = prevLogs.length === response.lines.length;
-          const sameContent = sameLength && prevLogs.every((line, i) => line === response.lines[i]);
-          
-          if (sameContent) {
-            // No changes, keep existing logs
-            return prevLogs;
-          }
-          
-          // Content is different, replace all logs
-          setTimeout(scrollToBottom, 100);
-          return response.lines;
-        });
-      } else if (true) {
-        setSystemLogs(response.lines);
-        // Auto-scroll to bottom after a brief delay to ensure DOM is updated
-        setTimeout(scrollToBottom, 100);
-      }
-    } catch (err) {
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: { status?: number };
-        };
-        // Handle 500 errors gracefully - logs might not be available during transitions
-        if (errorWithResponse.response?.status === 500) {
-          setSystemLogs([]);
-          // Don't show error for 500s, just show empty logs
-        } else {
-          const errorMessage = err.message || 'Failed to fetch system logs';
-          addError(
-            `Failed to fetch system logs: ${errorMessage}`,
-            errorWithResponse.response?.status
-          );
-        }
-      } else {
-        addError('Failed to fetch system logs');
-      }
-    } finally {
-      if (showLoader) {
-        setSystemLogsLoading(false);
-      }
-    }
   }, [
     client,
     id,
-    tailLogs,
-    scrollToBottom,
+    selectedContainer,
     stoppingWorkload,
     startingWorkload,
-    workload,
     addError,
   ]);
+
+  const fetchSystemLogs = useCallback(
+    async (showLoader = true) => {
+      if (!client || !id || stoppingWorkload || startingWorkload) return;
+
+      // Don't fetch logs unless status is awaitingCert or running
+      if (
+        !workload ||
+        (workload.status !== 'awaitingCert' && workload.status !== 'running')
+      ) {
+        setSystemLogs([]);
+        return;
+      }
+
+      try {
+        if (showLoader) {
+          setSystemLogsLoading(true);
+        }
+        const response = await client.getSystemLogs({
+          workloadId: id as string,
+          tail: tailLogs,
+          maxLines: 100,
+        });
+
+        // For non-loader updates (auto-refresh), only update if there are changes
+        if (!showLoader) {
+          setSystemLogs((prevLogs) => {
+            // If we have no previous logs, use the new ones
+            if (prevLogs.length === 0) {
+              if (response.lines.length > 0) {
+                setTimeout(scrollToBottom, 100);
+              }
+              return response.lines;
+            }
+
+            // If the new response has fewer lines, the logs were cleared/rotated
+            if (response.lines.length < prevLogs.length) {
+              return response.lines;
+            }
+
+            // Check if the logs are actually different by comparing the last few lines
+            const prevLastIndex = prevLogs.length - 1;
+            const newLastIndex = response.lines.length - 1;
+
+            // If the last line of previous logs matches a line in the new logs,
+            // we can determine where to slice from
+            if (prevLastIndex >= 0 && newLastIndex >= 0) {
+              const prevLastLine = prevLogs[prevLastIndex];
+
+              // Find where the previous logs end in the new logs
+              let matchIndex = -1;
+              for (let i = 0; i <= newLastIndex; i++) {
+                if (response.lines[i] === prevLastLine) {
+                  matchIndex = i;
+                }
+              }
+
+              if (matchIndex >= 0 && matchIndex < newLastIndex) {
+                // We found where old logs end, append only the new ones
+                const newLogs = response.lines.slice(matchIndex + 1);
+                setTimeout(scrollToBottom, 100);
+                return [...prevLogs, ...newLogs];
+              }
+            }
+
+            // If we can't determine the overlap, check if content is exactly the same
+            const sameLength = prevLogs.length === response.lines.length;
+            const sameContent =
+              sameLength &&
+              prevLogs.every((line, i) => line === response.lines[i]);
+
+            if (sameContent) {
+              // No changes, keep existing logs
+              return prevLogs;
+            }
+
+            // Content is different, replace all logs
+            setTimeout(scrollToBottom, 100);
+            return response.lines;
+          });
+        } else if (true) {
+          setSystemLogs(response.lines);
+          // Auto-scroll to bottom after a brief delay to ensure DOM is updated
+          setTimeout(scrollToBottom, 100);
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          const errorWithResponse = err as Error & {
+            response?: { status?: number };
+          };
+          // Handle 500 errors gracefully - logs might not be available during transitions
+          if (errorWithResponse.response?.status === 500) {
+            setSystemLogs([]);
+            // Don't show error for 500s, just show empty logs
+          } else {
+            const errorMessage = err.message || 'Failed to fetch system logs';
+            addError(
+              `Failed to fetch system logs: ${errorMessage}`,
+              errorWithResponse.response?.status
+            );
+          }
+        } else {
+          addError('Failed to fetch system logs');
+        }
+      } finally {
+        if (showLoader) {
+          setSystemLogsLoading(false);
+        }
+      }
+    },
+    [
+      client,
+      id,
+      tailLogs,
+      scrollToBottom,
+      stoppingWorkload,
+      startingWorkload,
+      workload,
+      addError,
+    ]
+  );
 
   const fetchContainerLogs = useCallback(
     async (containerName: string, stream: 'stdout' | 'stderr') => {
@@ -600,15 +612,31 @@ export default function WorkloadDetailPage() {
     if (activeLogsTab !== 'system' && activeLogsTab !== 'container') return;
 
     const logsInterval = setInterval(() => {
-      if (activeLogsTab === 'system' && (workload.status === 'awaitingCert' || workload.status === 'running')) {
+      if (
+        activeLogsTab === 'system' &&
+        (workload.status === 'awaitingCert' || workload.status === 'running')
+      ) {
         fetchSystemLogs(false); // Don't show loader for auto-refresh
-      } else if (activeLogsTab === 'container' && selectedContainer && workload.status === 'running') {
+      } else if (
+        activeLogsTab === 'container' &&
+        selectedContainer &&
+        workload.status === 'running'
+      ) {
         fetchContainerLogs(selectedContainer, activeStreamTab);
       }
     }, 5000); // Refresh logs every 5 seconds
 
     return () => clearInterval(logsInterval);
-  }, [client, id, workload?.status, activeLogsTab, selectedContainer, activeStreamTab, fetchSystemLogs, fetchContainerLogs]);
+  }, [
+    client,
+    id,
+    workload?.status,
+    activeLogsTab,
+    selectedContainer,
+    activeStreamTab,
+    fetchSystemLogs,
+    fetchContainerLogs,
+  ]);
 
   const executeStartAction = async () => {
     if (!client || !workload) return;
@@ -638,7 +666,10 @@ export default function WorkloadDetailPage() {
       setStartingWorkload(false);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[]; error?: string }; status?: number };
+          response?: {
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
         };
         const errorMessage =
           errorWithResponse.response?.data?.error ||
@@ -686,11 +717,7 @@ export default function WorkloadDetailPage() {
       switch (confirmModal.action) {
         case 'delete':
           await client.deleteWorkload(workload.workloadId);
-          
-          // Keep modal open with loading state for 2 seconds
-          // This gives the backend time to process the deletion
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           setConfirmModal({ isOpen: false, action: null, loading: false });
           router.push('/workloads');
           break;
@@ -747,7 +774,10 @@ export default function WorkloadDetailPage() {
       setActionInProgress(false);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[]; error?: string }; status?: number };
+          response?: {
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
         };
         const errorMessage =
           errorWithResponse.response?.data?.error ||
