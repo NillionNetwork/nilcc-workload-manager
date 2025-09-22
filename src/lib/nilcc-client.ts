@@ -9,7 +9,8 @@ import {
   WorkloadTier,
   Account,
   ListWorkloadEventsResponse,
-  SystemStats
+  SystemStats,
+  Artifact
 } from './nilcc-types';
 
 export class NilccClient {
@@ -150,6 +151,15 @@ export class NilccClient {
     const response: AxiosResponse<SystemStats> = await axios.post(
       `${this.baseUrl}/workloads/stats`,
       { workloadId },
+      { headers: this.headers }
+    );
+
+    return response.data;
+  }
+
+  async listArtifacts(): Promise<Artifact[]> {
+    const response: AxiosResponse<Artifact[]> = await axios.get(
+      `${this.baseUrl}/artifacts`,
       { headers: this.headers }
     );
 

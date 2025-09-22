@@ -6,8 +6,8 @@
 
 /* Font Definition */
 @font-face {
-  font-family: "TWKEverett";
-  src: url("./TWKEverett-Medium-web.woff") format("woff");
+  font-family: 'TWKEverett';
+  src: url('./TWKEverett-Medium-web.woff') format('woff');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -36,9 +36,9 @@
   --nillion-border: #e0e0e0;
 
   /* Typography */
-  --nillion-font-heading: "TWKEverett", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
-  --nillion-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  --nillion-font-heading: 'TWKEverett', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --nillion-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     sans-serif;
 
   /* Shadows */
@@ -50,7 +50,7 @@
 }
 
 /* Dark Mode */
-[data-theme="dark"]:root,
+[data-theme='dark']:root,
 .dark {
   --nillion-primary: #8a89ff;
   --nillion-primary-hover: #a5a4ff;
@@ -193,39 +193,39 @@ button:disabled {
 }
 
 /* Secondary button style - add type="button" */
-button[type="button"] {
+button[type='button'] {
   background-color: var(--nillion-bg-secondary);
   color: var(--nillion-text);
   border: 1px solid var(--nillion-border);
 }
 
-button[type="button"]:hover:not(:disabled) {
+button[type='button']:hover:not(:disabled) {
   background-color: var(--nillion-grey-light);
   border-color: var(--nillion-grey);
 }
 
-button[type="button"]:active:not(:disabled) {
+button[type='button']:active:not(:disabled) {
   background-color: var(--nillion-grey);
   border-color: var(--nillion-grey-dark);
 }
 
 /* Dark mode secondary buttons - outline style */
-.dark button[type="button"],
-[data-theme="dark"] button[type="button"] {
+.dark button[type='button'],
+[data-theme='dark'] button[type='button'] {
   background-color: transparent;
   color: var(--nillion-primary);
   border: 2px solid var(--nillion-primary);
 }
 
-.dark button[type="button"]:hover:not(:disabled),
-[data-theme="dark"] button[type="button"]:hover:not(:disabled) {
+.dark button[type='button']:hover:not(:disabled),
+[data-theme='dark'] button[type='button']:hover:not(:disabled) {
   background-color: var(--nillion-primary);
   color: white;
   border-color: var(--nillion-primary);
 }
 
-.dark button[type="button"]:active:not(:disabled),
-[data-theme="dark"] button[type="button"]:active:not(:disabled) {
+.dark button[type='button']:active:not(:disabled),
+[data-theme='dark'] button[type='button']:active:not(:disabled) {
   background-color: var(--nillion-primary-active);
   border-color: var(--nillion-primary-active);
 }
@@ -252,16 +252,16 @@ label {
 }
 
 /* Auto-style form inputs */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-input[type="tel"],
-input[type="url"],
-input[type="search"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"],
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='tel'],
+input[type='url'],
+input[type='search'],
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
 textarea,
 select {
   font-family: var(--nillion-font-body);
@@ -278,16 +278,16 @@ select {
   box-sizing: border-box;
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="number"]:focus,
-input[type="tel"]:focus,
-input[type="url"]:focus,
-input[type="search"]:focus,
-input[type="date"]:focus,
-input[type="time"]:focus,
-input[type="datetime-local"]:focus,
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='number']:focus,
+input[type='tel']:focus,
+input[type='url']:focus,
+input[type='search']:focus,
+input[type='date']:focus,
+input[type='time']:focus,
+input[type='datetime-local']:focus,
 textarea:focus,
 select:focus {
   outline: none;
@@ -300,9 +300,9 @@ select:focus {
 .dark input:focus,
 .dark textarea:focus,
 .dark select:focus,
-[data-theme="dark"] input:focus,
-[data-theme="dark"] textarea:focus,
-[data-theme="dark"] select:focus {
+[data-theme='dark'] input:focus,
+[data-theme='dark'] textarea:focus,
+[data-theme='dark'] select:focus {
   box-shadow: 0 0 0 3px rgba(138, 137, 255, 0.2);
 }
 
@@ -326,13 +326,13 @@ select {
 
 /* Dark mode select arrow */
 .dark select,
-[data-theme="dark"] select {
+[data-theme='dark'] select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23b0b0b0' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
 }
 
 /* Checkboxes and Radio buttons */
-input[type="checkbox"],
-input[type="radio"] {
+input[type='checkbox'],
+input[type='radio'] {
   width: 1.125rem;
   height: 1.125rem;
   margin: 0 0.5rem 0 0;
@@ -344,15 +344,15 @@ input[type="radio"] {
 }
 
 /* Custom checkbox/radio container */
-label input[type="checkbox"],
-label input[type="radio"] {
+label input[type='checkbox'],
+label input[type='radio'] {
   margin-top: 0.125rem;
   margin-bottom: 0.125rem;
 }
 
 /* Inline label styling for checkboxes and radios */
-label:has(input[type="checkbox"]),
-label:has(input[type="radio"]) {
+label:has(input[type='checkbox']),
+label:has(input[type='radio']) {
   display: flex;
   align-items: center;
   margin-bottom: 0.75rem;
@@ -368,14 +368,14 @@ label:has(input[type="radio"]) {
     align-items: center;
   }
 
-  label input[type="checkbox"] + *,
-  label input[type="radio"] + * {
+  label input[type='checkbox'] + *,
+  label input[type='radio'] + * {
     margin-left: 0;
   }
 }
 
 /* File input */
-input[type="file"] {
+input[type='file'] {
   padding: 0.375rem 0;
   border: none;
   background: none;
@@ -384,7 +384,7 @@ input[type="file"] {
 }
 
 /* Range input */
-input[type="range"] {
+input[type='range'] {
   padding: 0;
   margin: 0.5rem 0 1rem 0;
   background: transparent;
@@ -421,6 +421,10 @@ input[type="range"] {
   background-color: var(--nillion-bg-secondary) !important;
 }
 
+.nillion-text-secondary {
+  color: var(--nillion-text-secondary) !important;
+}
+
 /* Button variants */
 .nillion-button-primary {
   background-color: var(--nillion-primary) !important;
@@ -455,7 +459,7 @@ input[type="range"] {
 
 /* Dark mode specific overrides for better contrast */
 .dark .nillion-button-ghost:hover:not(:disabled),
-[data-theme="dark"] .nillion-button-ghost:hover:not(:disabled) {
+[data-theme='dark'] .nillion-button-ghost:hover:not(:disabled) {
   background-color: rgba(138, 137, 255, 0.2) !important;
 }
 

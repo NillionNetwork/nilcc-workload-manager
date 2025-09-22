@@ -1,3 +1,8 @@
+export interface Artifact {
+  version: string;
+  builtAt: string;
+}
+
 export interface WorkloadOptions {
   memory?: number;
   cpus?: number;
@@ -18,6 +23,7 @@ export interface CreateWorkloadRequest {
   cpus: number;
   disk: number;
   gpus: number;
+  artifactsVersion?: string;
   envVars?: Record<string, string>;
   files?: Record<string, string>;
   dockerCredentials?: DockerCredential[];
@@ -43,6 +49,7 @@ export interface WorkloadResponse {
   cpus: number;
   disk: number;
   gpus: number;
+  artifactsVersion?: string;
   creditRate: number;
   status: 'scheduled' | 'starting' | 'awaitingCert' | 'running' | 'stopped' | 'error';
   domain: string;

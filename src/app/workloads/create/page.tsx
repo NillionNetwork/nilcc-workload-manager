@@ -18,6 +18,7 @@ import {
   CreateWorkloadRequest,
   WorkloadTier,
   DockerCredential,
+  Artifact,
 } from '@/lib/nilcc-types';
 import DockerComposeHash from '@/components/DockerComposeHash';
 
@@ -32,6 +33,11 @@ export default function CreateWorkloadPage() {
   const [tiers, setTiers] = useState<WorkloadTier[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
   const [loadingTiers, setLoadingTiers] = useState(true);
+
+  // Artifact state
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [selectedArtifactVersion, setSelectedArtifactVersion] = useState<string>('');
+  const [loadingArtifacts, setLoadingArtifacts] = useState(true);
 
   // Form state
   const [name, setName] = useState('');
@@ -101,6 +107,40 @@ export default function CreateWorkloadPage() {
         })
         .finally(() => {
           setLoadingTiers(false);
+        });
+    }
+  }, [client, apiKey, addError]);
+
+  // Fetch available artifacts on mount
+  useEffect(() => {
+    if (client && apiKey) {
+      setLoadingArtifacts(true);
+      client
+        .listArtifacts()
+        .then((fetchedArtifacts) => {
+          setArtifacts(fetchedArtifacts);
+          // Default to first artifact (latest) if available
+          if (fetchedArtifacts.length > 0) {
+            setSelectedArtifactVersion(fetchedArtifacts[0].version);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch artifacts:', err);
+          if (err instanceof Error) {
+            const errorWithResponse = err as Error & {
+              response?: { data?: { errors?: string[]; error?: string }; status?: number };
+            };
+            const errorMessage = errorWithResponse.response?.data?.error || 
+              errorWithResponse.response?.data?.errors?.[0] ||
+              err.message ||
+              'Failed to load available artifacts';
+            addError(`Failed to load artifacts: ${errorMessage}`, errorWithResponse.response?.status);
+          } else {
+            addError('Failed to load available artifacts');
+          }
+        })
+        .finally(() => {
+          setLoadingArtifacts(false);
         });
     }
   }, [client, apiKey, addError]);
@@ -212,6 +252,7 @@ export default function CreateWorkloadPage() {
         cpus: selectedTier.cpus,
         disk: selectedTier.diskGb,
         gpus: selectedTier.gpus,
+        artifactsVersion: selectedArtifactVersion || undefined,
         envVars:
           Object.keys(envVarsObject).length > 0 ? envVarsObject : undefined,
         files: Object.keys(filesObject).length > 0 ? filesObject : undefined,
@@ -491,6 +532,42 @@ export default function CreateWorkloadPage() {
                     <p className="text-xs">No tiers available</p>
                   </Alert>
                 )}
+
+                {/* Artifact Version Selection */}
+                <div className="mt-4">
+                  <h4 className="text-xs font-medium text-card-foreground mb-1">
+                    Artifact Version
+                  </h4>
+                  <label
+                    className="text-xs text-muted-foreground block"
+                    style={{ marginBottom: '14px' }}
+                  >
+                    Select the VM image version for this workload
+                  </label>
+                  {loadingArtifacts && (
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      Loading artifact versions...
+                    </p>
+                  )}
+                  {!loadingArtifacts && artifacts.length > 0 && (
+                    <select
+                      value={selectedArtifactVersion}
+                      onChange={(e) => setSelectedArtifactVersion(e.target.value)}
+                      className="w-full p-2 text-xs border border-border rounded-md bg-background"
+                    >
+                      {artifacts.map((artifact) => (
+                        <option key={artifact.version} value={artifact.version}>
+                          {artifact.version} (Built: {new Date(artifact.builtAt).toLocaleDateString()})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {!loadingArtifacts && artifacts.length === 0 && (
+                    <Alert variant="warning" className="px-2 mt-0.5">
+                      <p className="text-xs">No artifact versions available. Using default.</p>
+                    </Alert>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -17,12 +17,12 @@ import {
 import { components } from '@/styles/design-system';
 import {
   WorkloadResponse,
-  Container,
   WorkloadEvent,
   SystemStats,
 } from '@/lib/nilcc-types';
 import WorkloadStats from '@/components/WorkloadStats';
 import DockerComposeHash from '@/components/DockerComposeHash';
+import LogsSection from '@/components/LogsSection';
 import {
   ExternalLink,
   Trash2,
@@ -34,7 +34,6 @@ import {
   MemoryStick,
   Monitor,
   FileText,
-  Terminal,
   Copy,
   Check,
   CreditCard,
@@ -45,6 +44,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Package,
 } from 'lucide-react';
 
 export default function WorkloadDetailPage() {
@@ -59,22 +59,6 @@ export default function WorkloadDetailPage() {
   const backendBufferTime = 3000; // 3 seconds
 
   // Logs state
-  const [containers, setContainers] = useState<Container[]>([]);
-  const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const [containerLogs, setContainerLogs] = useState<
-    Record<string, Record<'stdout' | 'stderr', string[]>>
-  >({});
-  const [selectedContainer, setSelectedContainer] = useState<string>('');
-  const [activeLogsTab, setActiveLogsTab] = useState<'system' | 'container'>(
-    'system'
-  );
-  const [activeStreamTab, setActiveStreamTab] = useState<'stdout' | 'stderr'>(
-    'stderr'
-  );
-  const [systemLogsLoading, setSystemLogsLoading] = useState(false);
-  const [containerLogsLoading, setContainerLogsLoading] = useState<
-    Record<'stdout' | 'stderr', boolean>
-  >({ stdout: false, stderr: false });
   const [tailLogs, setTailLogs] = useState(true);
   const [copiedCompose, setCopiedCompose] = useState(false);
   const [showEnvValues, setShowEnvValues] = useState(false);
@@ -98,16 +82,6 @@ export default function WorkloadDetailPage() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  // Ref for auto-scrolling logs
-  const logsContainerRef = useRef<HTMLDivElement>(null);
-  const initialLogsLoadRef = useRef(true);
-
-  const scrollToBottom = useCallback(() => {
-    if (logsContainerRef.current) {
-      logsContainerRef.current.scrollTop =
-        logsContainerRef.current.scrollHeight;
-    }
-  }, []);
 
   const fetchWorkload = useCallback(
     async (showLoader = true) => {
@@ -184,258 +158,6 @@ export default function WorkloadDetailPage() {
     }
   }, [client, id, addError]);
 
-  const fetchContainers = useCallback(async () => {
-    if (!client || !id || stoppingWorkload || startingWorkload) return;
-
-    try {
-      const containerList = await client.listContainers(id as string);
-      setContainers(containerList);
-      if (containerList.length > 0 && !selectedContainer) {
-        const firstContainer = containerList[0];
-        const containerName =
-          (firstContainer.names && firstContainer.names[0]) ||
-          firstContainer.name ||
-          `container-${0}`;
-        setSelectedContainer(containerName);
-      }
-    } catch (err) {
-      console.error('Failed to fetch containers:', err);
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: {
-            data?: { errors?: string[]; error?: string };
-            status?: number;
-          };
-        };
-        const errorMessage =
-          errorWithResponse.response?.data?.error ||
-          errorWithResponse.response?.data?.errors?.[0] ||
-          err.message ||
-          'Failed to fetch containers';
-        addError(
-          `Failed to fetch containers: ${errorMessage}`,
-          errorWithResponse.response?.status
-        );
-      }
-    }
-  }, [
-    client,
-    id,
-    selectedContainer,
-    stoppingWorkload,
-    startingWorkload,
-    addError,
-  ]);
-
-  const fetchSystemLogs = useCallback(
-    async (showLoader = true) => {
-      if (!client || !id || stoppingWorkload || startingWorkload) return;
-
-      // Don't fetch logs unless status is awaitingCert or running
-      if (
-        !workload ||
-        (workload.status !== 'awaitingCert' && workload.status !== 'running')
-      ) {
-        setSystemLogs([]);
-        return;
-      }
-
-      try {
-        if (showLoader) {
-          setSystemLogsLoading(true);
-        }
-        const response = await client.getSystemLogs({
-          workloadId: id as string,
-          tail: tailLogs,
-          maxLines: 100,
-        });
-
-        // For non-loader updates (auto-refresh), only update if there are changes
-        if (!showLoader) {
-          setSystemLogs((prevLogs) => {
-            // If we have no previous logs, use the new ones
-            if (prevLogs.length === 0) {
-              if (response.lines.length > 0) {
-                setTimeout(scrollToBottom, 100);
-              }
-              return response.lines;
-            }
-
-            // If the new response has fewer lines, the logs were cleared/rotated
-            if (response.lines.length < prevLogs.length) {
-              return response.lines;
-            }
-
-            // Check if the logs are actually different by comparing the last few lines
-            const prevLastIndex = prevLogs.length - 1;
-            const newLastIndex = response.lines.length - 1;
-
-            // If the last line of previous logs matches a line in the new logs,
-            // we can determine where to slice from
-            if (prevLastIndex >= 0 && newLastIndex >= 0) {
-              const prevLastLine = prevLogs[prevLastIndex];
-
-              // Find where the previous logs end in the new logs
-              let matchIndex = -1;
-              for (let i = 0; i <= newLastIndex; i++) {
-                if (response.lines[i] === prevLastLine) {
-                  matchIndex = i;
-                }
-              }
-
-              if (matchIndex >= 0 && matchIndex < newLastIndex) {
-                // We found where old logs end, append only the new ones
-                const newLogs = response.lines.slice(matchIndex + 1);
-                setTimeout(scrollToBottom, 100);
-                return [...prevLogs, ...newLogs];
-              }
-            }
-
-            // If we can't determine the overlap, check if content is exactly the same
-            const sameLength = prevLogs.length === response.lines.length;
-            const sameContent =
-              sameLength &&
-              prevLogs.every((line, i) => line === response.lines[i]);
-
-            if (sameContent) {
-              // No changes, keep existing logs
-              return prevLogs;
-            }
-
-            // Content is different, replace all logs
-            setTimeout(scrollToBottom, 100);
-            return response.lines;
-          });
-        } else if (true) {
-          setSystemLogs(response.lines);
-          // Auto-scroll to bottom after a brief delay to ensure DOM is updated
-          setTimeout(scrollToBottom, 100);
-        }
-      } catch (err) {
-        if (err instanceof Error) {
-          const errorWithResponse = err as Error & {
-            response?: { status?: number };
-          };
-          // Handle 500 errors gracefully - logs might not be available during transitions
-          if (errorWithResponse.response?.status === 500) {
-            setSystemLogs([]);
-            // Don't show error for 500s, just show empty logs
-          } else {
-            const errorMessage = err.message || 'Failed to fetch system logs';
-            addError(
-              `Failed to fetch system logs: ${errorMessage}`,
-              errorWithResponse.response?.status
-            );
-          }
-        } else {
-          addError('Failed to fetch system logs');
-        }
-      } finally {
-        if (showLoader) {
-          setSystemLogsLoading(false);
-        }
-      }
-    },
-    [
-      client,
-      id,
-      tailLogs,
-      scrollToBottom,
-      stoppingWorkload,
-      startingWorkload,
-      workload,
-      addError,
-    ]
-  );
-
-  const fetchContainerLogs = useCallback(
-    async (containerName: string, stream: 'stdout' | 'stderr') => {
-      if (!client || !id) return;
-
-      // Don't fetch logs unless status is running (containers only exist when running)
-      if (!workload || workload.status !== 'running') {
-        setContainerLogs((prev) => ({
-          ...prev,
-          [containerName]: {
-            ...prev[containerName],
-            [stream]: [],
-          },
-        }));
-        return;
-      }
-
-      try {
-        setContainerLogsLoading((prev) => ({ ...prev, [stream]: true }));
-        const response = await client.getContainerLogs({
-          workloadId: id as string,
-          container: containerName,
-          tail: tailLogs,
-          stream: stream,
-          maxLines: 100,
-        });
-        setContainerLogs((prev) => ({
-          ...prev,
-          [containerName]: {
-            ...prev[containerName],
-            [stream]: response.lines,
-          },
-        }));
-        // Auto-scroll to bottom after a brief delay to ensure DOM is updated
-        setTimeout(scrollToBottom, 100);
-      } catch (err) {
-        if (err instanceof Error) {
-          const errorWithResponse = err as Error & {
-            response?: { status?: number };
-          };
-          // Handle 500 errors gracefully
-          if (errorWithResponse.response?.status === 500) {
-            setContainerLogs((prev) => ({
-              ...prev,
-              [containerName]: {
-                ...prev[containerName],
-                [stream]: [],
-              },
-            }));
-          } else {
-            const errorMessage =
-              err.message || 'Failed to fetch container logs';
-            addError(
-              `Failed to fetch container logs: ${errorMessage}`,
-              errorWithResponse.response?.status
-            );
-          }
-        } else {
-          addError('Failed to fetch container logs');
-        }
-      } finally {
-        setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
-      }
-    },
-    [client, id, tailLogs, scrollToBottom, workload, addError]
-  );
-
-  const refreshLogs = useCallback(() => {
-    // Don't refresh logs unless status is appropriate
-    if (
-      !workload ||
-      (workload.status !== 'awaitingCert' && workload.status !== 'running')
-    ) {
-      return;
-    }
-
-    if (activeLogsTab === 'system') {
-      fetchSystemLogs(true); // Show loader for manual refresh
-    } else if (selectedContainer && workload.status === 'running') {
-      fetchContainerLogs(selectedContainer, activeStreamTab);
-    }
-  }, [
-    activeLogsTab,
-    selectedContainer,
-    activeStreamTab,
-    fetchSystemLogs,
-    fetchContainerLogs,
-    workload,
-  ]);
 
   const fetchStats = useCallback(async () => {
     if (!client || !id || !workload || workload.status !== 'running') return;
@@ -479,62 +201,13 @@ export default function WorkloadDetailPage() {
     }
   }, [client, id, fetchWorkload, fetchEvents]);
 
-  // Fetch system logs when workload is in an active state
-  useEffect(() => {
-    if (
-      workload &&
-      client &&
-      id &&
-      !actionInProgress && // Don't fetch during actions
-      !stoppingWorkload && // Don't fetch when stopping
-      !startingWorkload && // Don't fetch when starting
-      (workload.status === 'running' || workload.status === 'awaitingCert')
-    ) {
-      // Only show loader on the very first load
-      const showLoader = initialLogsLoadRef.current;
-      if (initialLogsLoadRef.current) {
-        initialLogsLoadRef.current = false;
-      }
-      fetchSystemLogs(showLoader);
-    }
-  }, [
-    workload,
-    client,
-    id,
-    actionInProgress,
-    stoppingWorkload,
-    startingWorkload,
-    fetchSystemLogs,
-  ]);
-
-  // Fetch containers only when workload is running
-  useEffect(() => {
-    if (
-      workload &&
-      workload.status === 'running' &&
-      client &&
-      id &&
-      !actionInProgress &&
-      !stoppingWorkload &&
-      !startingWorkload
-    ) {
-      fetchContainers();
-    }
-  }, [
-    workload,
-    client,
-    id,
-    actionInProgress,
-    stoppingWorkload,
-    startingWorkload,
-    fetchContainers,
-  ]);
 
   // Fetch stats when workload is running (only on initial load or refresh)
   useEffect(() => {
     if (
       workload &&
-      workload.status === 'running' &&
+      workload.status !== 'running' &&
+      workload.status !== 'awaitingCert' &&
       client &&
       id &&
       !actionInProgress
@@ -543,35 +216,17 @@ export default function WorkloadDetailPage() {
     }
   }, [workload, client, id, actionInProgress, fetchStats]);
 
-  // Switch to system logs tab when workload is not running
-  useEffect(() => {
-    if (
-      workload &&
-      workload.status !== 'running' &&
-      activeLogsTab === 'container'
-    ) {
-      setActiveLogsTab('system');
-    }
-  }, [workload, activeLogsTab]);
-
-  // Fetch container logs when selected container or stream changes
-  useEffect(() => {
-    if (
-      selectedContainer &&
-      activeLogsTab === 'container' &&
-      workload?.status === 'running' &&
-      !actionInProgress
-    ) {
-      fetchContainerLogs(selectedContainer, activeStreamTab);
-    }
-  }, [
-    selectedContainer,
-    activeLogsTab,
-    activeStreamTab,
-    workload?.status,
-    actionInProgress,
-    fetchContainerLogs,
-  ]);
+  // // Switch to system logs tab when workload is not running
+  // useEffect(() => {
+  //   if (
+  //     workload &&
+  //     workload.status !== 'running' &&
+  //     workload.status !== 'awaitingCert' &&
+  //     activeLogsTab === 'container'
+  //   ) {
+  //     setActiveLogsTab('system');
+  //   }
+  // }, [workload, activeLogsTab]);
 
   // Auto-refresh only when workload is starting, scheduled, or awaitingCert
   useEffect(() => {
@@ -598,46 +253,6 @@ export default function WorkloadDetailPage() {
     return () => clearInterval(interval);
   }, [client, id, workload?.status, fetchWorkload, fetchEvents]);
 
-  // Auto-refresh logs when in awaitingCert or running status
-  useEffect(() => {
-    if (
-      !client ||
-      !id ||
-      !workload ||
-      (workload.status !== 'awaitingCert' && workload.status !== 'running')
-    )
-      return;
-
-    // Only refresh if logs tab is active
-    if (activeLogsTab !== 'system' && activeLogsTab !== 'container') return;
-
-    const logsInterval = setInterval(() => {
-      if (
-        activeLogsTab === 'system' &&
-        (workload.status === 'awaitingCert' || workload.status === 'running')
-      ) {
-        fetchSystemLogs(false); // Don't show loader for auto-refresh
-      } else if (
-        activeLogsTab === 'container' &&
-        selectedContainer &&
-        workload.status === 'running'
-      ) {
-        fetchContainerLogs(selectedContainer, activeStreamTab);
-      }
-    }, 5000); // Refresh logs every 5 seconds
-
-    return () => clearInterval(logsInterval);
-  }, [
-    client,
-    id,
-    workload?.status,
-    activeLogsTab,
-    selectedContainer,
-    activeStreamTab,
-    fetchSystemLogs,
-    fetchContainerLogs,
-  ]);
-
   const executeStartAction = async () => {
     if (!client || !workload) return;
 
@@ -646,19 +261,11 @@ export default function WorkloadDetailPage() {
 
     try {
       await client.startWorkload(workload.workloadId);
-      // Clear existing data since we're starting
-      setSystemLogs([]);
-      setContainers([]);
-      setContainerLogs({});
       // Wait for backend to update status
       await new Promise((resolve) => setTimeout(resolve, backendBufferTime));
       // Now refresh to show status change
       await fetchWorkload();
       await fetchEvents();
-      // Refresh logs after a short delay
-      setTimeout(() => {
-        fetchSystemLogs(false); // Don't show loader after start action
-      }, 1000);
       setActionInProgress(false);
       setStartingWorkload(false);
     } catch (err) {
@@ -725,12 +332,6 @@ export default function WorkloadDetailPage() {
           setStoppingWorkload(true); // Block all fetches immediately
           await client.stopWorkload(workload.workloadId);
           setConfirmModal({ isOpen: false, action: null, loading: false });
-          // Clear logs and containers BEFORE refresh to prevent errors
-          setSystemLogs([]);
-          setContainers([]);
-          setContainerLogs({});
-          // Clear selected container to prevent container logs fetch
-          setSelectedContainer('');
           // Wait for backend to update status
           await new Promise((resolve) =>
             setTimeout(resolve, backendBufferTime)
@@ -746,10 +347,6 @@ export default function WorkloadDetailPage() {
           setStartingWorkload(true); // Block all fetches immediately
           await client.restartWorkload(workload.workloadId);
           setConfirmModal({ isOpen: false, action: null, loading: false });
-          // Clear existing data since we're restarting
-          setSystemLogs([]);
-          setContainers([]);
-          setContainerLogs({});
           // Wait for backend to update status
           await new Promise((resolve) =>
             setTimeout(resolve, backendBufferTime)
@@ -757,10 +354,6 @@ export default function WorkloadDetailPage() {
           // Now refresh to show status change
           await fetchWorkload();
           await fetchEvents();
-          // Refresh logs after a short delay
-          setTimeout(() => {
-            fetchSystemLogs();
-          }, 1000);
           setActionInProgress(false);
           setStartingWorkload(false);
           break;
@@ -1129,306 +722,25 @@ export default function WorkloadDetailPage() {
                     </h4>
                     {(workload.status === 'running' ||
                       workload.status === 'awaitingCert') && (
-                      <div className="flex items-center space-x-3">
-                        <label
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            fontSize: '0.875rem',
-                            margin: 0,
-                            marginRight: '0.5rem',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={tailLogs}
-                            onChange={(e) => setTailLogs(e.target.checked)}
-                            style={{ margin: 0 }}
-                          />
-                          <span
-                            style={{ color: 'var(--nillion-text-secondary)' }}
-                          >
-                            Tail logs
-                          </span>
-                        </label>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={refreshLogs}
-                          loading={
-                            activeLogsTab === 'system'
-                              ? systemLogsLoading
-                              : containerLogsLoading[activeStreamTab]
-                          }
-                        >
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          Refresh
-                        </Button>
-                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={tailLogs}
+                          onChange={(e) => setTailLogs(e.target.checked)}
+                        />
+                        <span className="text-muted-foreground">Tail logs</span>
+                      </label>
                     )}
                   </div>
-
-                  {/* Logs Tabs */}
-                  {(workload.status === 'running' ||
-                    workload.status === 'awaitingCert') && (
-                    <div
-                      style={{
-                        borderBottom: '2px solid var(--nillion-border)',
-                        marginBottom: '1rem',
-                      }}
-                    >
-                      <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
-                        <button
-                          onClick={() => setActiveLogsTab('system')}
-                          style={{
-                            padding: '0.75rem 1.5rem',
-                            marginBottom: '-2px',
-                            border: 'none',
-                            borderBottom:
-                              activeLogsTab === 'system'
-                                ? '2px solid var(--nillion-primary)'
-                                : '2px solid transparent',
-                            backgroundColor:
-                              activeLogsTab === 'system'
-                                ? 'var(--nillion-bg)'
-                                : 'transparent',
-                            color:
-                              activeLogsTab === 'system'
-                                ? 'var(--nillion-primary)'
-                                : 'var(--nillion-text-secondary)',
-                            fontWeight: '600',
-                            fontSize: '0.875rem',
-                            cursor: 'pointer',
-                            transition: 'all 200ms ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}
-                        >
-                          <FileText style={{ height: '1rem', width: '1rem' }} />
-                          System Logs
-                        </button>
-                        {workload.status === 'running' && (
-                          <button
-                            onClick={() => setActiveLogsTab('container')}
-                            style={{
-                              padding: '0.75rem 1.5rem',
-                              marginBottom: '-2px',
-                              border: 'none',
-                              borderBottom:
-                                activeLogsTab === 'container'
-                                  ? '2px solid var(--nillion-primary)'
-                                  : '2px solid transparent',
-                              backgroundColor:
-                                activeLogsTab === 'container'
-                                  ? 'var(--nillion-bg)'
-                                  : 'transparent',
-                              color:
-                                activeLogsTab === 'container'
-                                  ? 'var(--nillion-primary)'
-                                  : 'var(--nillion-text-secondary)',
-                              fontWeight: '600',
-                              fontSize: '0.875rem',
-                              cursor: 'pointer',
-                              transition: 'all 200ms ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                            }}
-                          >
-                            <Terminal
-                              style={{ height: '1rem', width: '1rem' }}
-                            />
-                            Container Logs
-                          </button>
-                        )}
-                      </nav>
-                    </div>
-                  )}
-
-                  {/* Container Selection */}
-                  {activeLogsTab === 'container' &&
-                    containers.length > 0 &&
-                    workload.status === 'running' && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-muted-foreground mb-2">
-                          Select Container
-                        </label>
-                        <select
-                          value={selectedContainer}
-                          onChange={(e) => setSelectedContainer(e.target.value)}
-                          className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                        >
-                          {containers.map((container, index) => {
-                            const containerName =
-                              (container.names && container.names[0]) ||
-                              container.name ||
-                              `container-${index}`;
-                            const displayName =
-                              (container.names && container.names[0]) ||
-                              container.name ||
-                              `Container ${index + 1}`;
-                            return (
-                              <option
-                                key={`${containerName}-${index}`}
-                                value={containerName}
-                              >
-                                {displayName} (
-                                {container.state ||
-                                  container.status ||
-                                  'Unknown'}
-                                )
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                    )}
-
-                  {/* Stream Tabs for Container Logs */}
-                  {activeLogsTab === 'container' &&
-                    workload.status === 'running' && (
-                      <div
-                        style={{
-                          borderBottom: '2px solid var(--nillion-border)',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <nav style={{ display: 'flex', margin: '0 -0.25rem' }}>
-                          <button
-                            onClick={() => setActiveStreamTab('stderr')}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              marginBottom: '-2px',
-                              border: 'none',
-                              borderBottom:
-                                activeStreamTab === 'stderr'
-                                  ? '2px solid var(--nillion-primary)'
-                                  : '2px solid transparent',
-                              backgroundColor:
-                                activeStreamTab === 'stderr'
-                                  ? 'var(--nillion-bg)'
-                                  : 'transparent',
-                              color:
-                                activeStreamTab === 'stderr'
-                                  ? 'var(--nillion-primary)'
-                                  : 'var(--nillion-text-secondary)',
-                              fontWeight: '600',
-                              fontSize: '0.875rem',
-                              cursor: 'pointer',
-                              transition: 'all 200ms ease',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            stderr
-                          </button>
-                          <button
-                            onClick={() => setActiveStreamTab('stdout')}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              marginBottom: '-2px',
-                              border: 'none',
-                              borderBottom:
-                                activeStreamTab === 'stdout'
-                                  ? '2px solid var(--nillion-primary)'
-                                  : '2px solid transparent',
-                              backgroundColor:
-                                activeStreamTab === 'stdout'
-                                  ? 'var(--nillion-bg)'
-                                  : 'transparent',
-                              color:
-                                activeStreamTab === 'stdout'
-                                  ? 'var(--nillion-primary)'
-                                  : 'var(--nillion-text-secondary)',
-                              fontWeight: '600',
-                              fontSize: '0.875rem',
-                              cursor: 'pointer',
-                              transition: 'all 200ms ease',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            stdout
-                          </button>
-                        </nav>
-                      </div>
-                    )}
-
-                  {/* Logs Display */}
-                  <div
-                    ref={logsContainerRef}
-                    className="bg-muted rounded-lg p-4 h-96 overflow-auto font-mono text-sm"
-                  >
-                    {workload.status !== 'running' &&
-                    workload.status !== 'awaitingCert' &&
-                    workload.status !== 'starting' &&
-                    workload.status !== 'scheduled' ? (
-                      <div className="text-muted-foreground flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p>Logs only appear for active workloads</p>
-                          <p className="text-xs mt-1">
-                            Start the workload to see logs
-                          </p>
-                        </div>
-                      </div>
-                    ) : (activeLogsTab === 'system' && systemLogsLoading) ||
-                      (activeLogsTab === 'container' &&
-                        containerLogsLoading[activeStreamTab]) ? (
-                      <div className="text-muted-foreground flex items-center">
-                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                        Loading logs...
-                      </div>
-                    ) : activeLogsTab === 'system' ? (
-                      systemLogs.length > 0 ? (
-                        <div className="space-y-1">
-                          {systemLogs.map((line, index) => (
-                            <div
-                              key={index}
-                              className="text-foreground whitespace-pre-wrap break-words"
-                            >
-                              {line}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-muted-foreground">
-                          {workload.status === 'starting' ||
-                          workload.status === 'scheduled'
-                            ? 'Logs will be available once deployment completes...'
-                            : 'No logs available'}
-                        </div>
-                      )
-                    ) : selectedContainer &&
-                      containerLogs[selectedContainer] &&
-                      containerLogs[selectedContainer][activeStreamTab] ? (
-                      containerLogs[selectedContainer][activeStreamTab].length >
-                      0 ? (
-                        <div className="space-y-1">
-                          {containerLogs[selectedContainer][
-                            activeStreamTab
-                          ].map((line, index) => (
-                            <div
-                              key={index}
-                              className="text-foreground whitespace-pre-wrap break-words"
-                            >
-                              {line}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-muted-foreground">
-                          No {activeStreamTab} logs available
-                        </div>
-                      )
-                    ) : (
-                      <div className="text-muted-foreground">
-                        {selectedContainer
-                          ? `No ${activeStreamTab} logs available`
-                          : 'Select a container to view logs'}
-                      </div>
-                    )}
-                  </div>
+                  
+                  <LogsSection
+                    workload={workload}
+                    client={client}
+                    actionInProgress={actionInProgress}
+                    stoppingWorkload={stoppingWorkload}
+                    startingWorkload={startingWorkload}
+                    tailLogs={tailLogs}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -1537,6 +849,15 @@ export default function WorkloadDetailPage() {
                       <span className="text-sm font-medium text-card-foreground ml-auto">
                         {workload.creditRate ?? 0} credit
                         {(workload.creditRate ?? 0) !== 1 ? 's' : ''}/min
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Package className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        Artifact Version:
+                      </span>
+                      <span className="text-sm font-medium text-card-foreground ml-auto">
+                        {workload.artifactsVersion || 'Default'}
                       </span>
                     </div>
                   </div>

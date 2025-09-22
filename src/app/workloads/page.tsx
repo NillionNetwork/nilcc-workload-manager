@@ -180,6 +180,10 @@ export default function WorkloadsPage() {
                     <span className="font-medium">Created:</span>{' '}
                     {new Date(workload.createdAt).toLocaleDateString()}
                   </p>
+                  <p>
+                    <span className="font-medium">Artifact Version:</span>{' '}
+                    {workload.artifactsVersion || 'Default'}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-end space-x-2">

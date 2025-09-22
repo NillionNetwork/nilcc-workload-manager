@@ -78,8 +78,10 @@ export async function POST(request: NextRequest) {
     cpus: number;
     disk: number;
     gpus: number;
+    artifactsVersion?: string;
     envVars?: Record<string, string>;
     files?: Record<string, string>;
+    dockerCredentials?: Array<{server: string; username: string; password: string}>;
     dockerCompose?: string;
     publicContainerName?: string;
     publicContainerPort?: number;
@@ -91,8 +93,10 @@ export async function POST(request: NextRequest) {
     cpus: body.cpus,
     disk: body.disk,
     gpus: body.gpus,
+    artifactsVersion: body.artifactsVersion,
     envVars: body.envVars,
     files: body.files,
+    dockerCredentials: body.dockerCredentials,
   };
 
   if (body.dockerImage) {
