@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -13,7 +13,7 @@ import {
   Textarea,
   Alert,
 } from '@/components/ui';
-import { Plus, Settings, ChevronDown, ChevronRight, Check } from 'lucide-react';
+import { Plus, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   CreateWorkloadRequest,
   WorkloadTier,
@@ -75,8 +75,6 @@ export default function CreateWorkloadPage() {
   // Docker Compose Hash visibility
   const [showDockerHash, setShowDockerHash] = useState(false);
 
-  // Tier dropdown state
-  const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
 
   // Get selected tier details
   const selectedTier = tiers.find((t) => t.tierId === selectedTierId);

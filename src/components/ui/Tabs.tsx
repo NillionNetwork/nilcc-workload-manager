@@ -57,7 +57,8 @@ export function Tabs({ defaultTab = 0, className = '', children }: TabsProps) {
   );
 }
 
-export function Tab(_props: TabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function Tab(_: TabProps) {
   // This is just a placeholder component for type checking
   // The actual rendering is handled by the Tabs component
   return null;
