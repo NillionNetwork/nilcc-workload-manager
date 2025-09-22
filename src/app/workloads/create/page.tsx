@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -13,7 +13,7 @@ import {
   Textarea,
   Alert,
 } from '@/components/ui';
-import { Plus, Settings, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Settings, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import {
   CreateWorkloadRequest,
   WorkloadTier,
@@ -36,7 +36,8 @@ export default function CreateWorkloadPage() {
 
   // Artifact state
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
-  const [selectedArtifactVersion, setSelectedArtifactVersion] = useState<string>('');
+  const [selectedArtifactVersion, setSelectedArtifactVersion] =
+    useState<string>('');
   const [loadingArtifacts, setLoadingArtifacts] = useState(true);
 
   // Form state
@@ -74,6 +75,9 @@ export default function CreateWorkloadPage() {
   // Docker Compose Hash visibility
   const [showDockerHash, setShowDockerHash] = useState(false);
 
+  // Tier dropdown state
+  const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
+
   // Get selected tier details
   const selectedTier = tiers.find((t) => t.tierId === selectedTierId);
 
@@ -85,8 +89,8 @@ export default function CreateWorkloadPage() {
         .listWorkloadTiers()
         .then((fetchedTiers) => {
           setTiers(fetchedTiers);
-          // Auto-select if only one tier
-          if (fetchedTiers.length === 1) {
+          // Auto-select first tier if available
+          if (fetchedTiers.length > 0) {
             setSelectedTierId(fetchedTiers[0].tierId);
           }
         })
@@ -94,13 +98,20 @@ export default function CreateWorkloadPage() {
           console.error('Failed to fetch tiers:', err);
           if (err instanceof Error) {
             const errorWithResponse = err as Error & {
-              response?: { data?: { errors?: string[]; error?: string }; status?: number };
+              response?: {
+                data?: { errors?: string[]; error?: string };
+                status?: number;
+              };
             };
-            const errorMessage = errorWithResponse.response?.data?.error || 
+            const errorMessage =
+              errorWithResponse.response?.data?.error ||
               errorWithResponse.response?.data?.errors?.[0] ||
               err.message ||
               'Failed to load available tiers';
-            addError(`Failed to load workload tiers: ${errorMessage}`, errorWithResponse.response?.status);
+            addError(
+              `Failed to load workload tiers: ${errorMessage}`,
+              errorWithResponse.response?.status
+            );
           } else {
             addError('Failed to load available workload tiers');
           }
@@ -128,13 +139,20 @@ export default function CreateWorkloadPage() {
           console.error('Failed to fetch artifacts:', err);
           if (err instanceof Error) {
             const errorWithResponse = err as Error & {
-              response?: { data?: { errors?: string[]; error?: string }; status?: number };
+              response?: {
+                data?: { errors?: string[]; error?: string };
+                status?: number;
+              };
             };
-            const errorMessage = errorWithResponse.response?.data?.error || 
+            const errorMessage =
+              errorWithResponse.response?.data?.error ||
               errorWithResponse.response?.data?.errors?.[0] ||
               err.message ||
               'Failed to load available artifacts';
-            addError(`Failed to load artifacts: ${errorMessage}`, errorWithResponse.response?.status);
+            addError(
+              `Failed to load artifacts: ${errorMessage}`,
+              errorWithResponse.response?.status
+            );
           } else {
             addError('Failed to load available artifacts');
           }
@@ -282,15 +300,15 @@ export default function CreateWorkloadPage() {
     } catch (err) {
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
-          response?: { 
+          response?: {
             data?: { errors?: string[]; error?: string };
             status?: number;
           };
         };
-        
+
         // Try to extract error from different possible structures
         let errorMessage = 'Failed to create workload';
-        
+
         if (errorWithResponse.response?.data?.error) {
           errorMessage = errorWithResponse.response.data.error;
         } else if (errorWithResponse.response?.data?.errors?.[0]) {
@@ -298,8 +316,11 @@ export default function CreateWorkloadPage() {
         } else if (err.message) {
           errorMessage = err.message;
         }
-        
-        addError(`Failed to create workload: ${errorMessage}`, errorWithResponse.response?.status);
+
+        addError(
+          `Failed to create workload: ${errorMessage}`,
+          errorWithResponse.response?.status
+        );
       } else {
         addError('Failed to create workload');
       }
@@ -415,7 +436,7 @@ export default function CreateWorkloadPage() {
     if (fileList.length > 0) {
       // Create a DataTransfer object to properly convert File[] to FileList
       const dataTransfer = new DataTransfer();
-      fileList.forEach(file => dataTransfer.items.add(file));
+      fileList.forEach((file) => dataTransfer.items.add(file));
       handleFileSelect(dataTransfer.files);
     }
   };
@@ -458,11 +479,11 @@ export default function CreateWorkloadPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-2">
-        {/* Combined Basic Info and Tier Selection */}
+        {/* Basic Info, Resource Tier, and Artifact Selection */}
         <Card className="my-4">
           <CardContent className="">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {/* Left Column - Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_2fr_1fr] gap-4">
+              {/* Basic Information */}
               <div>
                 <h4 className="text-xs font-medium text-card-foreground mb-1">
                   Basic Information
@@ -474,21 +495,18 @@ export default function CreateWorkloadPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="my-secure-app"
+                  placeholder="my-private-workload"
                   required
                   className="h-8 text-sm mt-0.5"
                 />
               </div>
 
-              {/* Right Column - Tier Selection */}
+              {/* Resource Tier */}
               <div>
                 <h4 className="text-xs font-medium text-card-foreground mb-1">
                   Resource Tier
                 </h4>
-                <label
-                  className="text-xs text-muted-foreground block"
-                  style={{ marginBottom: '14px' }}
-                >
+                <label className="text-xs text-muted-foreground block mb-2">
                   Select tier to set CPU, Memory, Disk & Cost
                 </label>
                 {loadingTiers && (
@@ -497,77 +515,61 @@ export default function CreateWorkloadPage() {
                   </p>
                 )}
                 {!loadingTiers && tiers.length > 0 && (
-                  <div className="mt-0.5">
-                    {/* Always show as radio buttons for consistency */}
+                  <select
+                    value={selectedTierId}
+                    onChange={(e) => setSelectedTierId(e.target.value)}
+                    className="w-full p-2 text-xs border border-border rounded-md bg-background"
+                    required
+                  >
                     {tiers.map((tier) => (
-                      <label
-                        key={tier.tierId}
-                        className={`block p-1.5 border rounded-md cursor-pointer transition-all text-xs ${
-                          selectedTierId === tier.tierId
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="tier"
-                          value={tier.tierId}
-                          checked={selectedTierId === tier.tierId}
-                          onChange={() => setSelectedTierId(tier.tierId)}
-                          className="sr-only"
-                        />
-                        <div>
-                          <p className="font-medium">{tier.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {tier.cpus} CPU • {tier.memoryMb}MB RAM •{' '}
-                            {tier.diskGb}GB Disk • {tier.cost} credit/min
-                          </p>
-                        </div>
-                      </label>
+                      <option key={tier.tierId} value={tier.tierId}>
+                        {tier.name} - {tier.cpus} CPU • {tier.memoryMb}MB RAM •{' '}
+                        {tier.diskGb}GB Disk • {tier.cost} credit/min
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 )}
                 {!loadingTiers && tiers.length === 0 && (
-                  <Alert variant="warning" className=" px-2 mt-0.5">
+                  <Alert variant="warning" className="px-2 mt-0.5">
                     <p className="text-xs">No tiers available</p>
                   </Alert>
                 )}
+              </div>
 
-                {/* Artifact Version Selection */}
-                <div className="mt-4">
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">
-                    Artifact Version
-                  </h4>
-                  <label
-                    className="text-xs text-muted-foreground block"
-                    style={{ marginBottom: '14px' }}
+              {/* Artifact Version Selection */}
+              <div>
+                <h4 className="text-xs font-medium text-card-foreground mb-1">
+                  Artifact Version
+                </h4>
+                <label className="text-xs text-muted-foreground block mb-2">
+                  Select the VM image version
+                </label>
+                {loadingArtifacts && (
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    Loading artifact versions...
+                  </p>
+                )}
+                {!loadingArtifacts && artifacts.length > 0 && (
+                  <select
+                    value={selectedArtifactVersion}
+                    onChange={(e) => setSelectedArtifactVersion(e.target.value)}
+                    className="w-full p-2 text-xs border border-border rounded-md bg-background"
                   >
-                    Select the VM image version for this workload
-                  </label>
-                  {loadingArtifacts && (
-                    <p className="text-muted-foreground text-xs mt-0.5">
-                      Loading artifact versions...
+                    {artifacts.map((artifact) => (
+                      <option key={artifact.version} value={artifact.version}>
+                        {artifact.version} (Built:{' '}
+                        {new Date(artifact.builtAt).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {!loadingArtifacts && artifacts.length === 0 && (
+                  <Alert variant="warning" className="px-2 mt-0.5">
+                    <p className="text-xs">
+                      No artifact versions available. Using default.
                     </p>
-                  )}
-                  {!loadingArtifacts && artifacts.length > 0 && (
-                    <select
-                      value={selectedArtifactVersion}
-                      onChange={(e) => setSelectedArtifactVersion(e.target.value)}
-                      className="w-full p-2 text-xs border border-border rounded-md bg-background"
-                    >
-                      {artifacts.map((artifact) => (
-                        <option key={artifact.version} value={artifact.version}>
-                          {artifact.version} (Built: {new Date(artifact.builtAt).toLocaleDateString()})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {!loadingArtifacts && artifacts.length === 0 && (
-                    <Alert variant="warning" className="px-2 mt-0.5">
-                      <p className="text-xs">No artifact versions available. Using default.</p>
-                    </Alert>
-                  )}
-                </div>
+                  </Alert>
+                )}
               </div>
             </div>
           </CardContent>
