@@ -206,8 +206,7 @@ export default function WorkloadDetailPage() {
   useEffect(() => {
     if (
       workload &&
-      workload.status !== 'running' &&
-      workload.status !== 'awaitingCert' &&
+      workload.status === 'running' &&
       client &&
       id &&
       !actionInProgress
