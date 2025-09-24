@@ -82,7 +82,6 @@ export default function WorkloadDetailPage() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-
   const fetchWorkload = useCallback(
     async (showLoader = true) => {
       if (!client || !id) return;
@@ -158,7 +157,6 @@ export default function WorkloadDetailPage() {
     }
   }, [client, id, addError]);
 
-
   const fetchStats = useCallback(async () => {
     if (!client || !id || !workload || workload.status !== 'running') return;
 
@@ -200,7 +198,6 @@ export default function WorkloadDetailPage() {
       setLoading(false);
     }
   }, [client, id, fetchWorkload, fetchEvents]);
-
 
   // Fetch stats when workload is running (only on initial load or refresh)
   useEffect(() => {
@@ -495,7 +492,7 @@ export default function WorkloadDetailPage() {
                   </div>
 
                   {/* Metadata */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-4 gap-4 mb-4">
                     <div>
                       <label className="text-sm text-muted-foreground">
                         Created
@@ -518,6 +515,35 @@ export default function WorkloadDetailPage() {
                         </span>
                       </div>
                     </div>
+
+                    {workload.publicContainerName && (
+                      <div>
+                        <label className="text-sm text-muted-foreground">
+                          Public Container
+                        </label>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-card-foreground">
+                            <code className="flex-1 px-1 py-1 bg-muted border border-border rounded text-sm text-foreground">
+                              {workload.publicContainerName}
+                            </code>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {workload.publicContainerPort && (
+                      <div>
+                        <label className="text-sm text-muted-foreground">
+                          Public Port
+                        </label>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-card-foreground">
+                            <code className="flex-1 px-1 py-1 bg-muted border border-border rounded text-sm text-foreground">
+                              {workload.publicContainerPort}
+                            </code>
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {workload.domain && (
@@ -731,7 +757,7 @@ export default function WorkloadDetailPage() {
                       </label>
                     )}
                   </div>
-                  
+
                   <LogsSection
                     workload={workload}
                     client={client}
