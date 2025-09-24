@@ -34,7 +34,10 @@ export default function LogsSection({
     actionInProgress || stoppingWorkload || startingWorkload;
 
   const fetchContainers = useCallback(async () => {
-    if (anyActionInProgress || workload.status !== 'running') {
+    if (
+      anyActionInProgress ||
+      (workload.status !== 'running' && workload.status !== 'awaitingCert')
+    ) {
       return;
     }
 
@@ -66,7 +69,7 @@ export default function LogsSection({
 
   // Fetch containers when workload becomes running
   useEffect(() => {
-    if (workload.status === 'running') {
+    if (workload.status === 'running' || workload.status === 'awaitingCert') {
       fetchContainers();
 
       // Set up interval to refresh containers list
@@ -79,33 +82,43 @@ export default function LogsSection({
 
   return (
     <Tabs defaultTab={0}>
-      <Tab label={
-        <>
-          <FileText className="h-4 w-4 mr-2" />
-          System
-        </>
-      }>
+      <Tab
+        label={
+          <>
+            <FileText className="h-4 w-4 mr-2" />
+            System
+          </>
+        }
+      >
         <SystemLogs
           workload={workload}
           client={client}
           actionInProgress={anyActionInProgress}
           tailLogs={tailLogs}
-          isActive={true}
+          isActive={
+            workload.status === 'starting' ||
+            workload.status === 'running' ||
+            workload.status === 'awaitingCert'
+          }
         />
       </Tab>
-      <Tab label={
-        <>
-          <Terminal className="h-4 w-4 mr-2" />
-          Container
-        </>
-      }>
+      <Tab
+        label={
+          <>
+            <Terminal className="h-4 w-4 mr-2" />
+            Container
+          </>
+        }
+      >
         <ContainerLogs
           workload={workload}
           client={client}
           containers={containers}
           actionInProgress={anyActionInProgress}
           tailLogs={tailLogs}
-          isActive={true}
+          isActive={
+            workload.status === 'running' || workload.status === 'awaitingCert'
+          }
         />
       </Tab>
     </Tabs>

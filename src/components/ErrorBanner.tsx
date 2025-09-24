@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useError } from '../contexts/ErrorContext';
 
 export const ErrorBanner: React.FC = () => {
   const { errors, removeError } = useError();
+  const pathname = usePathname();
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
 
   // Auto-dismiss errors after 10 seconds
@@ -30,6 +32,11 @@ export const ErrorBanner: React.FC = () => {
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Don't show error banner on /workloads page
+  if (pathname === '/workloads') {
+    return null;
+  }
 
   if (errors.length === 0) return null;
 

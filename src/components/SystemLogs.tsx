@@ -29,12 +29,17 @@ export default function SystemLogs({
 
   const scrollToBottom = useCallback(() => {
     if (logsContainerRef.current) {
-      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+      logsContainerRef.current.scrollTop =
+        logsContainerRef.current.scrollHeight;
     }
   }, []);
 
   const fetchSystemLogs = useCallback(async () => {
-    if (!isActive || actionInProgress || !['awaitingCert', 'running'].includes(workload.status)) {
+    if (
+      !isActive ||
+      actionInProgress ||
+      !['starting', 'awaitingCert', 'running'].includes(workload.status)
+    ) {
       return;
     }
 
@@ -69,7 +74,10 @@ export default function SystemLogs({
 
           // Find where the previous logs end in the new logs
           const lastPrevLogIndex = newLogs.lastIndexOf(lastPrevLog);
-          if (lastPrevLogIndex !== -1 && lastPrevLogIndex < newLogs.length - 1) {
+          if (
+            lastPrevLogIndex !== -1 &&
+            lastPrevLogIndex < newLogs.length - 1
+          ) {
             // There are new logs after the last previous log
             const newLines = newLogs.slice(lastPrevLogIndex + 1);
             setTimeout(scrollToBottom, 100);
@@ -85,23 +93,36 @@ export default function SystemLogs({
         const errorWithResponse = err as Error & {
           response?: { status?: number };
         };
-        
+
         // Don't show errors for 500 status codes during transitions
         if (errorWithResponse.response?.status === 500) {
           return;
         }
-        
+
         console.error('Failed to fetch system logs:', err);
         addError('Failed to fetch system logs');
       }
     } finally {
       setSystemLogsLoading(false);
     }
-  }, [workload.workloadId, workload.status, client, addError, tailLogs, actionInProgress, isActive, scrollToBottom]);
+  }, [
+    workload.workloadId,
+    workload.status,
+    client,
+    addError,
+    tailLogs,
+    actionInProgress,
+    isActive,
+    scrollToBottom,
+  ]);
 
   // Auto-refresh logs
   useEffect(() => {
-    if (!isActive || !['awaitingCert', 'running'].includes(workload.status)) {
+    if (
+      !isActive ||
+      actionInProgress ||
+      !['starting', 'awaitingCert', 'running'].includes(workload.status)
+    ) {
       return;
     }
 
@@ -112,7 +133,7 @@ export default function SystemLogs({
     const interval = setInterval(fetchSystemLogs, 5000);
 
     return () => clearInterval(interval);
-  }, [fetchSystemLogs, isActive, workload.status]);
+  }, [fetchSystemLogs, isActive, workload.status, actionInProgress]);
 
   // Clear logs when workload actions are performed
   useEffect(() => {
@@ -121,7 +142,9 @@ export default function SystemLogs({
     }
   }, [actionInProgress]);
 
-  const canShowLogs = ['awaitingCert', 'running'].includes(workload.status);
+  const canShowLogs = ['starting', 'awaitingCert', 'running'].includes(
+    workload.status
+  );
 
   return (
     <div className="space-y-4">

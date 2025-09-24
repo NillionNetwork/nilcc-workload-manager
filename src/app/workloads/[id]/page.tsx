@@ -212,18 +212,6 @@ export default function WorkloadDetailPage() {
     }
   }, [workload, client, id, actionInProgress, fetchStats]);
 
-  // // Switch to system logs tab when workload is not running
-  // useEffect(() => {
-  //   if (
-  //     workload &&
-  //     workload.status !== 'running' &&
-  //     workload.status !== 'awaitingCert' &&
-  //     activeLogsTab === 'container'
-  //   ) {
-  //     setActiveLogsTab('system');
-  //   }
-  // }, [workload, activeLogsTab]);
-
   // Auto-refresh only when workload is starting, scheduled, or awaitingCert
   useEffect(() => {
     if (
@@ -738,36 +726,45 @@ export default function WorkloadDetailPage() {
                 </Card>
               )}
 
-              {/* Logs Section */}
-              <Card>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-card-foreground">
-                      Logs
-                    </h4>
-                    {(workload.status === 'running' ||
-                      workload.status === 'awaitingCert') && (
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={tailLogs}
-                          onChange={(e) => setTailLogs(e.target.checked)}
-                        />
-                        <span className="text-muted-foreground">Tail logs</span>
-                      </label>
-                    )}
-                  </div>
+              {/* Logs Section - Hide when stopping, restarting, or during delete action */}
+              {!stoppingWorkload &&
+                !startingWorkload &&
+                !actionInProgress &&
+                confirmModal.action !== 'delete' &&
+                confirmModal.action !== 'restart' &&
+                confirmModal.action !== 'stop' && (
+                  <Card>
+                    <CardContent>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-card-foreground">
+                          Logs
+                        </h4>
+                        {(workload.status === 'running' ||
+                          workload.status === 'awaitingCert') && (
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={tailLogs}
+                              onChange={(e) => setTailLogs(e.target.checked)}
+                            />
+                            <span className="text-muted-foreground">
+                              Tail logs
+                            </span>
+                          </label>
+                        )}
+                      </div>
 
-                  <LogsSection
-                    workload={workload}
-                    client={client}
-                    actionInProgress={actionInProgress}
-                    stoppingWorkload={stoppingWorkload}
-                    startingWorkload={startingWorkload}
-                    tailLogs={tailLogs}
-                  />
-                </CardContent>
-              </Card>
+                      <LogsSection
+                        workload={workload}
+                        client={client}
+                        actionInProgress={actionInProgress}
+                        stoppingWorkload={stoppingWorkload}
+                        startingWorkload={startingWorkload}
+                        tailLogs={tailLogs}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
             </div>
 
             {/* Sidebar */}
