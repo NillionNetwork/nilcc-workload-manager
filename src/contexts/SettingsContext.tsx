@@ -3,18 +3,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { NilccClient } from '@/lib/nilcc-client';
 
-type Theme = 'light' | 'dark';
+type ThemeMode = 'system' | 'light' | 'dark';
+type ResolvedTheme = 'light' | 'dark';
 
 interface SettingsContextType {
   apiKey: string | null;
   apiBaseUrl: string;
   client: NilccClient | null;
-  theme: Theme;
+  themeMode: ThemeMode;
+  resolvedTheme: ResolvedTheme;
   setApiKey: (key: string) => void;
   setApiBaseUrl: (url: string) => void;
   clearApiKey: () => void;
-  setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  cycleTheme: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -25,7 +27,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKeyState] = useState<string | null>(null);
   const [apiBaseUrl, setApiBaseUrlState] = useState<string>(DEFAULT_API_BASE_URL);
   const [client, setClient] = useState<NilccClient | null>(null);
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
+  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>('light');
 
   // Effect to handle initial load
   useEffect(() => {
@@ -34,15 +38,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const savedApiKey = localStorage.getItem('nilcc-api-key');
       const savedApiBaseUrl = localStorage.getItem('nilcc-api-base-url') || DEFAULT_API_BASE_URL;
       
-      // Get saved theme or use browser preference as default
-      let savedTheme = localStorage.getItem('nilcc-theme') as Theme;
-      if (!savedTheme) {
-        // Use browser preference for first visit
-        savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
+      // Get saved theme mode, default to 'system'
+      const savedThemeMode = (localStorage.getItem('nilcc-theme-mode') as ThemeMode) || 'system';
+      
+      // Detect system theme preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setSystemTheme(prefersDark ? 'dark' : 'light');
       
       setApiBaseUrlState(savedApiBaseUrl);
-      setThemeState(savedTheme);
+      setThemeModeState(savedThemeMode);
       
       if (savedApiKey) {
         setApiKeyState(savedApiKey);
@@ -51,14 +55,34 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Effect to apply theme to document
+  // Effect to listen for system theme changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      const handleChange = (e: MediaQueryListEvent) => {
+        setSystemTheme(e.matches ? 'dark' : 'light');
+      };
+      
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, []);
+
+  // Effect to resolve the actual theme based on mode and system preference
+  useEffect(() => {
+    const resolved = themeMode === 'system' ? systemTheme : themeMode;
+    setResolvedTheme(resolved);
+  }, [themeMode, systemTheme]);
+
+  // Effect to apply resolved theme to document
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const root = document.documentElement;
       root.classList.remove('light', 'dark');
-      root.classList.add(theme);
+      root.classList.add(resolvedTheme);
     }
-  }, [theme]);
+  }, [resolvedTheme]);
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
@@ -87,16 +111,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+  const setThemeMode = (newMode: ThemeMode) => {
+    setThemeModeState(newMode);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('nilcc-theme', newTheme);
+      localStorage.setItem('nilcc-theme-mode', newMode);
     }
   };
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
+  const cycleTheme = () => {
+    // Cycle through: system -> light -> dark -> system
+    const nextMode: ThemeMode = 
+      themeMode === 'system' ? 'light' :
+      themeMode === 'light' ? 'dark' : 'system';
+    setThemeMode(nextMode);
   };
 
   return (
@@ -104,12 +131,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       apiKey, 
       apiBaseUrl, 
       client, 
-      theme,
+      themeMode,
+      resolvedTheme,
       setApiKey, 
       setApiBaseUrl, 
       clearApiKey,
-      setTheme,
-      toggleTheme
+      setThemeMode,
+      cycleTheme
     }}>
       {children}
     </SettingsContext.Provider>

@@ -1,15 +1,16 @@
 'use client';
 
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Monitor } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export function ThemeToggleSlider() {
-  const { theme, toggleTheme } = useSettings();
-  const isDark = theme === 'dark';
+  const { themeMode, resolvedTheme, cycleTheme } = useSettings();
+  const isDark = resolvedTheme === 'dark';
+  const isSystem = themeMode === 'system';
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={cycleTheme}
       style={{
         position: 'relative',
         display: 'inline-flex',
@@ -27,7 +28,7 @@ export function ThemeToggleSlider() {
       }}
       role="switch"
       aria-checked={isDark}
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      aria-label={`Current theme: ${themeMode}. Click to change theme.`}
     >
       <span
         style={{
@@ -45,7 +46,9 @@ export function ThemeToggleSlider() {
           pointerEvents: 'none'
         }}
       >
-        {isDark ? (
+        {isSystem ? (
+          <Monitor style={{ width: '0.75rem', height: '0.75rem', color: isDark ? 'var(--nillion-primary)' : 'var(--nillion-grey-dark)' }} />
+        ) : isDark ? (
           <Moon style={{ width: '0.75rem', height: '0.75rem', color: 'var(--nillion-primary)' }} />
         ) : (
           <Sun style={{ width: '0.75rem', height: '0.75rem', color: 'var(--nillion-grey-dark)' }} />
