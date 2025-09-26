@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSettings } from '@/contexts/SettingsContext';
-import { useError } from '@/contexts/ErrorContext';
-import { Card, CardContent, Button, Input, Alert } from '@/components/ui';
-import { components } from '@/styles/design-system';
+import { useState, useEffect } from "react";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useError } from "@/contexts/ErrorContext";
+import { Card, CardContent, Button, Input, Alert } from "@/components/ui";
+import { components } from "@/styles/design-system";
 import {
   Settings,
   Eye,
@@ -16,16 +16,16 @@ import {
   Calendar,
   RefreshCw,
   DollarSign,
-} from 'lucide-react';
-import { Account, WorkloadResponse } from '@/lib/nilcc-types';
-import Link from 'next/link';
+} from "lucide-react";
+import { Account, WorkloadResponse } from "@/lib/nilcc-types";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const { apiKey, apiBaseUrl, setApiKey, setApiBaseUrl, clearApiKey, client } =
     useSettings();
   const { addError } = useError();
-  const [newApiKey, setNewApiKey] = useState('');
-  const [newApiBaseUrl, setNewApiBaseUrl] = useState('');
+  const [newApiKey, setNewApiKey] = useState("");
+  const [newApiBaseUrl, setNewApiBaseUrl] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
@@ -38,13 +38,13 @@ export default function SettingsPage() {
 
     if (newApiKey.trim()) {
       setApiKey(newApiKey.trim());
-      setNewApiKey('');
+      setNewApiKey("");
       hasChanges = true;
     }
 
     if (newApiBaseUrl.trim() && newApiBaseUrl.trim() !== apiBaseUrl) {
       setApiBaseUrl(newApiBaseUrl.trim());
-      setNewApiBaseUrl('');
+      setNewApiBaseUrl("");
       hasChanges = true;
     }
 
@@ -56,13 +56,13 @@ export default function SettingsPage() {
 
   const handleClear = () => {
     clearApiKey();
-    setNewApiKey('');
-    setNewApiBaseUrl('');
+    setNewApiKey("");
+    setNewApiBaseUrl("");
   };
 
   const maskedApiKey = apiKey
     ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`
-    : '';
+    : "";
 
   // Fetch account data when component mounts and API key is available
   useEffect(() => {
@@ -75,16 +75,23 @@ export default function SettingsPage() {
         const accountData = await client.getAccount();
         setAccount(accountData);
       } catch (error) {
-        console.error('Failed to fetch account:', error);
+        console.error("Failed to fetch account:", error);
         if (error instanceof Error) {
           const errorWithResponse = error as Error & {
-            response?: { data?: { errors?: string[]; error?: string }; status?: number };
+            response?: {
+              data?: { errors?: string[]; error?: string };
+              status?: number;
+            };
           };
-          const errorMessage = errorWithResponse.response?.data?.error || 
+          const errorMessage =
+            errorWithResponse.response?.data?.error ||
             errorWithResponse.response?.data?.errors?.[0] ||
             error.message ||
-            'Unable to fetch account information';
-          addError(`Failed to fetch account information: ${errorMessage}`, errorWithResponse.response?.status);
+            "Unable to fetch account information";
+          addError(
+            `Failed to fetch account information: ${errorMessage}`,
+            errorWithResponse.response?.status
+          );
         }
       } finally {
         setAccountLoading(false);
@@ -104,16 +111,23 @@ export default function SettingsPage() {
         const workloadData = await client.listWorkloads();
         setWorkloads(workloadData);
       } catch (error) {
-        console.error('Failed to fetch workloads:', error);
+        console.error("Failed to fetch workloads:", error);
         if (error instanceof Error) {
           const errorWithResponse = error as Error & {
-            response?: { data?: { errors?: string[]; error?: string }; status?: number };
+            response?: {
+              data?: { errors?: string[]; error?: string };
+              status?: number;
+            };
           };
-          const errorMessage = errorWithResponse.response?.data?.error || 
+          const errorMessage =
+            errorWithResponse.response?.data?.error ||
             errorWithResponse.response?.data?.errors?.[0] ||
             error.message ||
-            'Unable to fetch workloads';
-          addError(`Failed to fetch workloads for credit usage: ${errorMessage}`, errorWithResponse.response?.status);
+            "Unable to fetch workloads";
+          addError(
+            `Failed to fetch workloads for credit usage: ${errorMessage}`,
+            errorWithResponse.response?.status
+          );
         }
       } finally {
         setWorkloadsLoading(false);
@@ -132,16 +146,23 @@ export default function SettingsPage() {
       const accountData = await client.getAccount();
       setAccount(accountData);
     } catch (error) {
-      console.error('Failed to fetch account:', error);
+      console.error("Failed to fetch account:", error);
       if (error instanceof Error) {
         const errorWithResponse = error as Error & {
-          response?: { data?: { errors?: string[]; error?: string }; status?: number };
+          response?: {
+            data?: { errors?: string[]; error?: string };
+            status?: number;
+          };
         };
-        const errorMessage = errorWithResponse.response?.data?.error || 
+        const errorMessage =
+          errorWithResponse.response?.data?.error ||
           errorWithResponse.response?.data?.errors?.[0] ||
           error.message ||
-          'Unable to fetch account information';
-        addError(`Failed to refresh account information: ${errorMessage}`, errorWithResponse.response?.status);
+          "Unable to fetch account information";
+        addError(
+          `Failed to refresh account information: ${errorMessage}`,
+          errorWithResponse.response?.status
+        );
       }
     } finally {
       setAccountLoading(false);
@@ -149,10 +170,10 @@ export default function SettingsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -166,7 +187,7 @@ export default function SettingsPage() {
 
     workloads.forEach((workload) => {
       // Current active credits per minute
-      if (workload.status === 'running') {
+      if (workload.status === "running") {
         currentActiveCreditsPerMin += workload.creditRate;
       }
     });
@@ -252,7 +273,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">
-                {apiKey ? 'Update API Key' : 'Enter API Key'}
+                {apiKey ? "Update API Key" : "Enter API Key"}
               </label>
               <Input
                 type="password"
@@ -275,7 +296,7 @@ export default function SettingsPage() {
                 className="font-mono h-8 text-sm mt-0.5"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                The base URL for the NilCC API (defaults to sandbox environment)
+                The base URL for the NilCC API
               </p>
             </div>
 
@@ -369,7 +390,7 @@ export default function SettingsPage() {
                   <span className="text-sm font-medium">Estimated Monthly</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground">
-                  {creditStats?.estimatedMonthlyUsage.toLocaleString() || '0'}
+                  {creditStats?.estimatedMonthlyUsage.toLocaleString() || "0"}
                 </div>
                 {creditStats && creditStats.hasRunningWorkloads && (
                   <p className="text-xs text-muted-foreground mt-1">
@@ -400,14 +421,14 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Per week</span>
                     <span className="font-medium">
-                      {creditStats.estimatedWeeklyUsage.toLocaleString()}{' '}
+                      {creditStats.estimatedWeeklyUsage.toLocaleString()}{" "}
                       credits
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Per month</span>
                     <span className="font-medium">
-                      {creditStats.estimatedMonthlyUsage.toLocaleString()}{' '}
+                      {creditStats.estimatedMonthlyUsage.toLocaleString()}{" "}
                       credits
                     </span>
                   </div>
@@ -427,7 +448,7 @@ export default function SettingsPage() {
                 </h5>
                 <div className="space-y-1">
                   {workloads
-                    .filter((w) => w.status === 'running')
+                    .filter((w) => w.status === "running")
                     .slice(0, 5)
                     .map((workload) => (
                       <div
@@ -445,20 +466,20 @@ export default function SettingsPage() {
                         </span>
                       </div>
                     ))}
-                  {workloads.filter((w) => w.status === 'running').length ===
+                  {workloads.filter((w) => w.status === "running").length ===
                     0 && (
                     <p className="text-xs text-muted-foreground">
                       No active workloads
                     </p>
                   )}
-                  {workloads.filter((w) => w.status === 'running').length >
+                  {workloads.filter((w) => w.status === "running").length >
                     5 && (
                     <Link
                       href="/workloads"
                       className="text-xs text-primary hover:underline inline-block mt-1"
                     >
-                      View all{' '}
-                      {workloads.filter((w) => w.status === 'running').length}{' '}
+                      View all{" "}
+                      {workloads.filter((w) => w.status === "running").length}{" "}
                       active workloads →
                     </Link>
                   )}

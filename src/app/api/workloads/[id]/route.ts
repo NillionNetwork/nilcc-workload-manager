@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const DEFAULT_NILCC_API_BASE = 'https://nilcc-api.sandbox.app-cluster.sandbox.nilogy.xyz';
+import { DEFAULT_NILCC_API_BASE } from '@/lib/constants';
 
 export async function GET(
   request: NextRequest,

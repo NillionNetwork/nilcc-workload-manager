@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { NilccClient } from '@/lib/nilcc-client';
+import { DEFAULT_NILCC_API_BASE } from '@/lib/constants';
 
 type ThemeMode = 'system' | 'light' | 'dark';
 type ResolvedTheme = 'light' | 'dark';
@@ -21,11 +22,9 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-const DEFAULT_API_BASE_URL = 'https://nilcc-api.sandbox.app-cluster.sandbox.nilogy.xyz';
-
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKeyState] = useState<string | null>(null);
-  const [apiBaseUrl, setApiBaseUrlState] = useState<string>(DEFAULT_API_BASE_URL);
+  const [apiBaseUrl, setApiBaseUrlState] = useState<string>(DEFAULT_NILCC_API_BASE);
   const [client, setClient] = useState<NilccClient | null>(null);
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
@@ -36,7 +35,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     // Load settings from localStorage on mount
     if (typeof window !== 'undefined') {
       const savedApiKey = localStorage.getItem('nilcc-api-key');
-      const savedApiBaseUrl = localStorage.getItem('nilcc-api-base-url') || DEFAULT_API_BASE_URL;
+      const savedApiBaseUrl = localStorage.getItem('nilcc-api-base-url') || DEFAULT_NILCC_API_BASE;
       
       // Get saved theme mode, default to 'system'
       const savedThemeMode = (localStorage.getItem('nilcc-theme-mode') as ThemeMode) || 'system';

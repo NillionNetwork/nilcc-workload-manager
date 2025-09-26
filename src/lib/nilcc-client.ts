@@ -12,6 +12,7 @@ import {
   SystemStats,
   Artifact
 } from './nilcc-types';
+import { DEFAULT_NILCC_API_BASE } from './constants';
 
 export class NilccClient {
   private readonly apiKey: string;
@@ -22,7 +23,7 @@ export class NilccClient {
   constructor(apiKey: string, baseUrl: string = '/api', nilccApiBaseUrl?: string) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
-    this.nilccApiBaseUrl = nilccApiBaseUrl || 'https://nilcc-api.sandbox.app-cluster.sandbox.nilogy.xyz';
+    this.nilccApiBaseUrl = nilccApiBaseUrl || DEFAULT_NILCC_API_BASE;
     this.headers = {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
