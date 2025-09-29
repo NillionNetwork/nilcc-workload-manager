@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useSettings } from '@/contexts/SettingsContext';
-import { useError } from '@/contexts/ErrorContext';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useError } from "@/contexts/ErrorContext";
 import {
   Card,
   CardContent,
@@ -13,16 +13,16 @@ import {
   Alert,
   Modal,
   Input,
-} from '@/components/ui';
-import { components } from '@/styles/design-system';
+} from "@/components/ui";
+import { components } from "@/styles/design-system";
 import {
   WorkloadResponse,
   WorkloadEvent,
   SystemStats,
-} from '@/lib/nilcc-types';
-import WorkloadStats from '@/components/WorkloadStats';
-import DockerComposeHash from '@/components/DockerComposeHash';
-import LogsSection from '@/components/LogsSection';
+} from "@/lib/nilcc-types";
+import WorkloadStats from "@/components/WorkloadStats";
+import DockerComposeHash from "@/components/DockerComposeHash";
+import LogsSection from "@/components/LogsSection";
 import {
   ExternalLink,
   Trash2,
@@ -45,7 +45,7 @@ import {
   Eye,
   EyeOff,
   Package,
-} from 'lucide-react';
+} from "lucide-react";
 
 export default function WorkloadDetailPage() {
   const { id } = useParams();
@@ -66,10 +66,10 @@ export default function WorkloadDetailPage() {
   // Action state
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    action: 'delete' | 'start' | 'stop' | 'restart' | null;
+    action: "delete" | "start" | "stop" | "restart" | null;
     loading: boolean;
   }>({ isOpen: false, action: null, loading: false });
-  const [confirmName, setConfirmName] = useState('');
+  const [confirmName, setConfirmName] = useState("");
   const [actionInProgress, setActionInProgress] = useState(false);
   const [stoppingWorkload, setStoppingWorkload] = useState(false);
   const [startingWorkload, setStartingWorkload] = useState(false);
@@ -104,13 +104,13 @@ export default function WorkloadDetailPage() {
             errorWithResponse.response?.data?.error ||
             errorWithResponse.response?.data?.errors?.[0] ||
             err.message ||
-            'Failed to fetch workload details';
+            "Failed to fetch workload details";
           addError(
             `Failed to fetch workload details: ${errorMessage}`,
             errorWithResponse.response?.status
           );
         } else {
-          addError('Failed to fetch workload details');
+          addError("Failed to fetch workload details");
         }
       } finally {
         if (showLoader) {
@@ -134,7 +134,7 @@ export default function WorkloadDetailPage() {
         )
       );
     } catch (err) {
-      console.error('Failed to fetch events:', err);
+      console.error("Failed to fetch events:", err);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
           response?: {
@@ -146,7 +146,7 @@ export default function WorkloadDetailPage() {
           errorWithResponse.response?.data?.error ||
           errorWithResponse.response?.data?.errors?.[0] ||
           err.message ||
-          'Failed to fetch events';
+          "Failed to fetch events";
         addError(
           `Failed to fetch workload events: ${errorMessage}`,
           errorWithResponse.response?.status
@@ -158,14 +158,14 @@ export default function WorkloadDetailPage() {
   }, [client, id, addError]);
 
   const fetchStats = useCallback(async () => {
-    if (!client || !id || !workload || workload.status !== 'running') return;
+    if (!client || !id || !workload || workload.status !== "running") return;
 
     try {
       setStatsLoading(true);
       const data = await client.getWorkloadStats(id as string);
       setStats(data);
     } catch (err) {
-      console.error('Failed to fetch stats:', err);
+      console.error("Failed to fetch stats:", err);
       if (err instanceof Error) {
         const errorWithResponse = err as Error & {
           response?: {
@@ -177,13 +177,13 @@ export default function WorkloadDetailPage() {
           errorWithResponse.response?.data?.error ||
           errorWithResponse.response?.data?.errors?.[0] ||
           err.message ||
-          'Failed to fetch system stats';
+          "Failed to fetch system stats";
         addError(
           `Failed to fetch workload stats: ${errorMessage}`,
           errorWithResponse.response?.status
         );
       } else {
-        addError('Failed to fetch workload stats');
+        addError("Failed to fetch workload stats");
       }
     } finally {
       setStatsLoading(false);
@@ -203,7 +203,7 @@ export default function WorkloadDetailPage() {
   useEffect(() => {
     if (
       workload &&
-      workload.status === 'running' &&
+      workload.status === "running" &&
       client &&
       id &&
       !actionInProgress
@@ -217,15 +217,15 @@ export default function WorkloadDetailPage() {
     if (
       !client ||
       !id ||
-      (workload?.status !== 'starting' &&
-        workload?.status !== 'scheduled' &&
-        workload?.status !== 'awaitingCert')
+      (workload?.status !== "starting" &&
+        workload?.status !== "scheduled" &&
+        workload?.status !== "awaitingCert")
     )
       return;
 
     // Different intervals for different states
     const refreshInterval =
-      workload?.status === 'scheduled' || workload?.status === 'awaitingCert'
+      workload?.status === "scheduled" || workload?.status === "awaitingCert"
         ? 3000
         : 15000;
 
@@ -266,28 +266,28 @@ export default function WorkloadDetailPage() {
           errorWithResponse.response?.data?.error ||
           errorWithResponse.response?.data?.errors?.[0] ||
           err.message ||
-          'Failed to start workload';
+          "Failed to start workload";
         addError(
           `Failed to start workload: ${errorMessage}`,
           errorWithResponse.response?.status
         );
       } else {
-        addError('Failed to start workload');
+        addError("Failed to start workload");
       }
     }
   };
 
   const handleAction = async (
-    action: 'delete' | 'start' | 'stop' | 'restart'
+    action: "delete" | "start" | "stop" | "restart"
   ) => {
     if (!client || !workload) return;
 
     // Start action doesn't need confirmation
-    if (action === 'start') {
+    if (action === "start") {
       await executeStartAction();
     } else {
       setConfirmModal({ isOpen: true, action, loading: false });
-      setConfirmName('');
+      setConfirmName("");
     }
   };
 
@@ -306,13 +306,13 @@ export default function WorkloadDetailPage() {
 
     try {
       switch (confirmModal.action) {
-        case 'delete':
+        case "delete":
           await client.deleteWorkload(workload.workloadId);
 
           setConfirmModal({ isOpen: false, action: null, loading: false });
-          router.push('/workloads');
+          router.push("/workloads");
           break;
-        case 'stop':
+        case "stop":
           setStoppingWorkload(true); // Block all fetches immediately
           await client.stopWorkload(workload.workloadId);
           setConfirmModal({ isOpen: false, action: null, loading: false });
@@ -327,7 +327,7 @@ export default function WorkloadDetailPage() {
           setActionInProgress(false);
           setStoppingWorkload(false);
           break;
-        case 'restart':
+        case "restart":
           setStartingWorkload(true); // Block all fetches immediately
           await client.restartWorkload(workload.workloadId);
           setConfirmModal({ isOpen: false, action: null, loading: false });
@@ -342,7 +342,7 @@ export default function WorkloadDetailPage() {
           setStartingWorkload(false);
           break;
       }
-      if (confirmModal.action === 'delete') {
+      if (confirmModal.action === "delete") {
         setConfirmModal({ isOpen: false, action: null, loading: false });
       }
       setActionInProgress(false);
@@ -373,16 +373,16 @@ export default function WorkloadDetailPage() {
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'running':
-        return 'success';
-      case 'starting':
-      case 'scheduled':
-      case 'awaitingCert':
-        return 'warning';
-      case 'error':
-        return 'danger';
+      case "running":
+        return "success";
+      case "starting":
+      case "scheduled":
+      case "awaitingCert":
+        return "warning";
+      case "error":
+        return "danger";
       default:
-        return 'neutral';
+        return "neutral";
     }
   };
 
@@ -416,7 +416,7 @@ export default function WorkloadDetailPage() {
         <div className="flex items-center">
           <div>
             <h2 className="text-sm font-bold text-foreground">
-              {workload?.name || 'Workload Details'}
+              {workload?.name || "Workload Details"}
             </h2>
             {workload && (
               <p className="text-muted-foreground font-mono text-sm">
@@ -466,8 +466,8 @@ export default function WorkloadDetailPage() {
                     <div className="flex items-center space-x-2">
                       <Badge variant={getStatusVariant(workload.status)}>
                         <span className="flex items-center gap-1">
-                          {(workload.status === 'starting' ||
-                            workload.status === 'awaitingCert') && (
+                          {(workload.status === "starting" ||
+                            workload.status === "awaitingCert") && (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           )}
                           {workload.status}
@@ -544,24 +544,37 @@ export default function WorkloadDetailPage() {
                           <code className="flex-1 px-3 py-2 bg-muted border border-border rounded text-sm text-foreground">
                             https://{workload.domain}
                           </code>
-                          {workload.status === 'running' && (
+                        </div>
+
+                        {workload.status === "running" && (
+                          <div className="my-3">
                             <a
                               href={`https://${workload.domain}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <Button size="sm">
+                              <Button size="sm" className="mr-3">
                                 <ExternalLink className="h-4 w-4 mr-1" />
-                                Visit
+                                Visit Application
                               </Button>
                             </a>
-                          )}
-                        </div>
+                            <a
+                              href={`https://${workload.domain}/nilcc/api/v2/report`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Button size="sm" className="mr-3">
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Attestation Report
+                              </Button>
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {workload.status === 'starting' && (
+                  {workload.status === "starting" && (
                     <Alert variant="info" className="mt-4">
                       <div className="flex items-start">
                         <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
@@ -576,7 +589,7 @@ export default function WorkloadDetailPage() {
                     </Alert>
                   )}
 
-                  {workload.status === 'awaitingCert' && (
+                  {workload.status === "awaitingCert" && (
                     <Alert variant="info" className="mt-4">
                       <div className="flex items-start">
                         <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
@@ -672,7 +685,7 @@ export default function WorkloadDetailPage() {
                           </code>
                           <span className="text-muted-foreground">=</span>
                           <code className="px-2 py-1 bg-muted text-foreground rounded text-sm font-mono">
-                            {showEnvValues ? value : '••••••••'}
+                            {showEnvValues ? value : "••••••••"}
                           </code>
                         </div>
                       ))}
@@ -707,13 +720,13 @@ export default function WorkloadDetailPage() {
                           </div>
                           <div className="text-xs text-muted-foreground">
                             <p>
-                              Mounted at:{' '}
+                              Mounted at:{" "}
                               <code className="text-xs bg-muted px-1 rounded">
                                 $FILES/{path}
                               </code>
                             </p>
                             <p className="mt-1">
-                              Use in docker-compose:{' '}
+                              Use in docker-compose:{" "}
                               <code className="text-xs bg-muted px-1 rounded">
                                 - $FILES/{path}:/path/in/container
                               </code>
@@ -730,17 +743,17 @@ export default function WorkloadDetailPage() {
               {!stoppingWorkload &&
                 !startingWorkload &&
                 !actionInProgress &&
-                confirmModal.action !== 'delete' &&
-                confirmModal.action !== 'restart' &&
-                confirmModal.action !== 'stop' && (
+                confirmModal.action !== "delete" &&
+                confirmModal.action !== "restart" &&
+                confirmModal.action !== "stop" && (
                   <Card>
                     <CardContent>
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-lg font-semibold text-card-foreground">
                           Logs
                         </h4>
-                        {(workload.status === 'running' ||
-                          workload.status === 'awaitingCert') && (
+                        {(workload.status === "running" ||
+                          workload.status === "awaitingCert") && (
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
@@ -776,11 +789,11 @@ export default function WorkloadDetailPage() {
                     Actions
                   </h4>
                   <div className="space-y-2">
-                    {workload.status != 'stopped' && (
+                    {workload.status != "stopped" && (
                       <>
                         <Button
                           variant="secondary"
-                          onClick={() => handleAction('stop')}
+                          onClick={() => handleAction("stop")}
                           className="w-full"
                         >
                           <Square className="h-4 w-4 mr-2" />
@@ -788,7 +801,7 @@ export default function WorkloadDetailPage() {
                         </Button>
                         <Button
                           variant="secondary"
-                          onClick={() => handleAction('restart')}
+                          onClick={() => handleAction("restart")}
                           className="w-full"
                         >
                           <RotateCw className="h-4 w-4 mr-2" />
@@ -796,10 +809,10 @@ export default function WorkloadDetailPage() {
                         </Button>
                       </>
                     )}
-                    {workload.status === 'stopped' && (
+                    {workload.status === "stopped" && (
                       <Button
                         variant="primary"
-                        onClick={() => handleAction('start')}
+                        onClick={() => handleAction("start")}
                         className="w-full"
                       >
                         <Play className="h-4 w-4 mr-2" />
@@ -808,7 +821,7 @@ export default function WorkloadDetailPage() {
                     )}
                     <Button
                       variant="secondary"
-                      onClick={() => handleAction('delete')}
+                      onClick={() => handleAction("delete")}
                       className="w-full"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -870,7 +883,7 @@ export default function WorkloadDetailPage() {
                       </span>
                       <span className="text-sm font-medium text-card-foreground ml-auto">
                         {workload.creditRate ?? 0} credit
-                        {(workload.creditRate ?? 0) !== 1 ? 's' : ''}/min
+                        {(workload.creditRate ?? 0) !== 1 ? "s" : ""}/min
                       </span>
                     </div>
                     <div className="flex items-center">
@@ -879,7 +892,7 @@ export default function WorkloadDetailPage() {
                         Artifact Version:
                       </span>
                       <span className="text-sm font-medium text-card-foreground ml-auto">
-                        {workload.artifactsVersion || 'Default'}
+                        {workload.artifactsVersion || "Default"}
                       </span>
                     </div>
                   </div>
@@ -887,7 +900,7 @@ export default function WorkloadDetailPage() {
               </Card>
 
               {/* System Stats */}
-              {workload.status === 'running' && (
+              {workload.status === "running" && (
                 <WorkloadStats
                   stats={stats}
                   loading={statsLoading}
@@ -925,15 +938,15 @@ export default function WorkloadDetailPage() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-medium capitalize">
-                              {event.details.kind === 'failedToStart'
-                                ? 'Failed to Start'
+                              {event.details.kind === "failedToStart"
+                                ? "Failed to Start"
                                 : event.details.kind}
                             </span>
                             <time className="text-xs text-muted-foreground">
                               {new Date(event.timestamp).toLocaleTimeString()}
                             </time>
                           </div>
-                          {event.details.kind === 'failedToStart' && (
+                          {event.details.kind === "failedToStart" && (
                             <p className="text-xs text-destructive mt-1">
                               {event.details.error}
                             </p>
@@ -952,7 +965,7 @@ export default function WorkloadDetailPage() {
             isOpen={confirmModal.isOpen}
             onClose={() => {
               setConfirmModal({ isOpen: false, action: null, loading: false });
-              setConfirmName('');
+              setConfirmName("");
             }}
             title={`Confirm ${confirmModal.action
               ?.charAt(0)
@@ -962,16 +975,16 @@ export default function WorkloadDetailPage() {
               <p className="font-medium">
                 Are you sure you want to {confirmModal.action} this workload?
               </p>
-              {confirmModal.action === 'delete' && (
+              {confirmModal.action === "delete" && (
                 <p className="text-sm mt-1">This action cannot be undone.</p>
               )}
 
               <div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Type{' '}
+                  Type{" "}
                   <span className="font-mono font-semibold bg-secondary text-primary">
                     {workload.name}
-                  </span>{' '}
+                  </span>{" "}
                   to confirm:
                 </p>
                 <Input
@@ -992,7 +1005,7 @@ export default function WorkloadDetailPage() {
                       action: null,
                       loading: false,
                     });
-                    setConfirmName('');
+                    setConfirmName("");
                   }}
                   disabled={confirmModal.loading}
                 >
@@ -1000,7 +1013,7 @@ export default function WorkloadDetailPage() {
                 </Button>
                 <Button
                   variant={
-                    confirmModal.action === 'delete' ? 'danger' : 'primary'
+                    confirmModal.action === "delete" ? "danger" : "primary"
                   }
                   onClick={executeAction}
                   disabled={
