@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useSettings } from '@/contexts/SettingsContext';
-import { useError } from '@/contexts/ErrorContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useError } from "@/contexts/ErrorContext";
 import {
   Card,
   CardContent,
@@ -12,15 +12,21 @@ import {
   Input,
   Textarea,
   Alert,
-} from '@/components/ui';
-import { Plus, Settings, ChevronDown, ChevronRight } from 'lucide-react';
+} from "@/components/ui";
+import {
+  Plus,
+  Settings,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
 import {
   CreateWorkloadRequest,
   WorkloadTier,
   DockerCredential,
   Artifact,
-} from '@/lib/nilcc-types';
-import DockerComposeHash from '@/components/DockerComposeHash';
+} from "@/lib/nilcc-types";
+import DockerComposeHash from "@/components/DockerComposeHash";
 
 export default function CreateWorkloadPage() {
   const router = useRouter();
@@ -31,23 +37,23 @@ export default function CreateWorkloadPage() {
 
   // Tier state
   const [tiers, setTiers] = useState<WorkloadTier[]>([]);
-  const [selectedTierId, setSelectedTierId] = useState<string>('');
+  const [selectedTierId, setSelectedTierId] = useState<string>("");
   const [loadingTiers, setLoadingTiers] = useState(true);
 
   // Artifact state
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [selectedArtifactVersion, setSelectedArtifactVersion] =
-    useState<string>('');
+    useState<string>("");
   const [loadingArtifacts, setLoadingArtifacts] = useState(true);
 
   // Form state
-  const [name, setName] = useState('');
-  const [imageType, setImageType] = useState<'public' | 'private'>('private');
+  const [name, setName] = useState("");
+  const [imageType, setImageType] = useState<"public" | "private">("private");
 
   // Public image fields
-  const [dockerImage, setDockerImage] = useState('');
-  const [containerPort, setContainerPort] = useState('80');
-  const [serviceName, setServiceName] = useState('api');
+  const [dockerImage, setDockerImage] = useState("");
+  const [containerPort, setContainerPort] = useState("80");
+  const [serviceName, setServiceName] = useState("api");
 
   // Private image fields
   const [dockerCompose, setDockerCompose] = useState(`services:
@@ -55,8 +61,8 @@ export default function CreateWorkloadPage() {
     image: caddy:2
     command: |
       caddy respond --listen :8080 --body '{"hello":"world"}' --header "Content-Type: application/json"`);
-  const [serviceToExpose, setServiceToExpose] = useState('web');
-  const [servicePortToExpose, setServicePortToExpose] = useState('8080');
+  const [serviceToExpose, setServiceToExpose] = useState("web");
+  const [servicePortToExpose, setServicePortToExpose] = useState("8080");
 
   // Environment variables
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
@@ -75,7 +81,6 @@ export default function CreateWorkloadPage() {
   // Docker Compose Hash visibility
   const [showDockerHash, setShowDockerHash] = useState(false);
 
-
   // Get selected tier details
   const selectedTier = tiers.find((t) => t.tierId === selectedTierId);
 
@@ -93,7 +98,7 @@ export default function CreateWorkloadPage() {
           }
         })
         .catch((err) => {
-          console.error('Failed to fetch tiers:', err);
+          console.error("Failed to fetch tiers:", err);
           if (err instanceof Error) {
             const errorWithResponse = err as Error & {
               response?: {
@@ -105,13 +110,13 @@ export default function CreateWorkloadPage() {
               errorWithResponse.response?.data?.error ||
               errorWithResponse.response?.data?.errors?.[0] ||
               err.message ||
-              'Failed to load available tiers';
+              "Failed to load available tiers";
             addError(
               `Failed to load workload tiers: ${errorMessage}`,
               errorWithResponse.response?.status
             );
           } else {
-            addError('Failed to load available workload tiers');
+            addError("Failed to load available workload tiers");
           }
         })
         .finally(() => {
@@ -134,7 +139,7 @@ export default function CreateWorkloadPage() {
           }
         })
         .catch((err) => {
-          console.error('Failed to fetch artifacts:', err);
+          console.error("Failed to fetch artifacts:", err);
           if (err instanceof Error) {
             const errorWithResponse = err as Error & {
               response?: {
@@ -146,13 +151,13 @@ export default function CreateWorkloadPage() {
               errorWithResponse.response?.data?.error ||
               errorWithResponse.response?.data?.errors?.[0] ||
               err.message ||
-              'Failed to load available artifacts';
+              "Failed to load available artifacts";
             addError(
               `Failed to load artifacts: ${errorMessage}`,
               errorWithResponse.response?.status
             );
           } else {
-            addError('Failed to load available artifacts');
+            addError("Failed to load available artifacts");
           }
         })
         .finally(() => {
@@ -166,27 +171,27 @@ export default function CreateWorkloadPage() {
     if (!image) return null;
 
     // Must contain a colon for tag
-    if (!image.includes(':')) {
-      return 'Docker image must include a tag (e.g., nginx:latest, node:18, redis:alpine)';
+    if (!image.includes(":")) {
+      return "Docker image must include a tag (e.g., nginx:latest, node:18, redis:alpine)";
     }
 
     // Basic format validation
-    const parts = image.split(':');
+    const parts = image.split(":");
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      return 'Invalid Docker image format. Use: image:tag';
+      return "Invalid Docker image format. Use: image:tag";
     }
 
     return null;
   };
 
   const dockerImageError =
-    imageType === 'public' ? validateDockerImage(dockerImage) : null;
+    imageType === "public" ? validateDockerImage(dockerImage) : null;
 
   // Parse Docker Compose to extract service names
   const parseDockerCompose = (yaml: string): string[] => {
     try {
       // Basic YAML parsing for services
-      const lines = yaml.split('\n');
+      const lines = yaml.split("\n");
       const services: string[] = [];
       let inServices = false;
       let currentIndent = -1;
@@ -196,7 +201,7 @@ export default function CreateWorkloadPage() {
         const indent = line.length - line.trimStart().length;
 
         // Check if we're in the services section
-        if (trimmed === 'services:') {
+        if (trimmed === "services:") {
           inServices = true;
           currentIndent = indent;
           continue;
@@ -211,7 +216,7 @@ export default function CreateWorkloadPage() {
         }
 
         // Exit services section if we're back at the root level
-        if (inServices && indent <= currentIndent && trimmed !== '') {
+        if (inServices && indent <= currentIndent && trimmed !== "") {
           inServices = false;
         }
       }
@@ -224,7 +229,7 @@ export default function CreateWorkloadPage() {
 
   // Update available services when Docker Compose changes
   useEffect(() => {
-    if (imageType === 'private' && dockerCompose) {
+    if (imageType === "private" && dockerCompose) {
       const services = parseDockerCompose(dockerCompose);
       setAvailableServices(services);
 
@@ -277,7 +282,7 @@ export default function CreateWorkloadPage() {
       };
 
       const workloadData =
-        imageType === 'public'
+        imageType === "public"
           ? {
               ...baseData,
               dockerImage,
@@ -305,7 +310,7 @@ export default function CreateWorkloadPage() {
         };
 
         // Try to extract error from different possible structures
-        let errorMessage = 'Failed to create workload';
+        let errorMessage = "Failed to create workload";
 
         if (errorWithResponse.response?.data?.error) {
           errorMessage = errorWithResponse.response.data.error;
@@ -320,7 +325,7 @@ export default function CreateWorkloadPage() {
           errorWithResponse.response?.status
         );
       } else {
-        addError('Failed to create workload');
+        addError("Failed to create workload");
       }
     } finally {
       setCreating(false);
@@ -328,7 +333,7 @@ export default function CreateWorkloadPage() {
   };
 
   const addEnvVar = () => {
-    setEnvVars([...envVars, { key: '', value: '' }]);
+    setEnvVars([...envVars, { key: "", value: "" }]);
   };
 
   const removeEnvVar = (index: number) => {
@@ -337,7 +342,7 @@ export default function CreateWorkloadPage() {
 
   const updateEnvVar = (
     index: number,
-    field: 'key' | 'value',
+    field: "key" | "value",
     value: string
   ) => {
     const updated = [...envVars];
@@ -349,7 +354,7 @@ export default function CreateWorkloadPage() {
   const addDockerCredential = () => {
     setDockerCredentials([
       ...dockerCredentials,
-      { server: '', username: '', password: '' },
+      { server: "", username: "", password: "" },
     ]);
   };
 
@@ -359,7 +364,7 @@ export default function CreateWorkloadPage() {
 
   const updateDockerCredential = (
     index: number,
-    field: 'server' | 'username' | 'password',
+    field: "server" | "username" | "password",
     value: string
   ) => {
     const updated = [...dockerCredentials];
@@ -381,7 +386,7 @@ export default function CreateWorkloadPage() {
 
   const sanitizeFilePath = (path: string): string => {
     // Replace spaces with underscores and remove any characters not matching the pattern
-    return path.replace(/\s+/g, '_').replace(/[^\w\/._-]/g, '');
+    return path.replace(/\s+/g, "_").replace(/[^\w\/._-]/g, "");
   };
 
   const handleFileSelect = async (fileList: FileList) => {
@@ -404,7 +409,7 @@ export default function CreateWorkloadPage() {
         const reader = new FileReader();
         reader.onload = (e) => {
           const base64 = e.target?.result as string;
-          resolve(base64.split(',')[1]); // Remove data URL prefix
+          resolve(base64.split(",")[1]); // Remove data URL prefix
         };
         reader.readAsDataURL(file);
       });
@@ -425,7 +430,7 @@ export default function CreateWorkloadPage() {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item.kind === 'file') {
+      if (item.kind === "file") {
         const file = item.getAsFile();
         if (file) fileList.push(file);
       }
@@ -446,7 +451,7 @@ export default function CreateWorkloadPage() {
 
   if (!apiKey) {
     return (
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: "1.5rem" }}>
         <Alert variant="warning" className="flex items-center">
           <Settings className="h-4 w-4 mr-2" />
           <div>
@@ -468,7 +473,7 @@ export default function CreateWorkloadPage() {
   }
 
   return (
-    <div style={{ marginBottom: '1rem' }}>
+    <div style={{ marginBottom: "1rem" }}>
       {/* Header */}
       <div className="mb-2">
         <h2 className="text-lg font-semibold text-foreground">
@@ -521,7 +526,7 @@ export default function CreateWorkloadPage() {
                   >
                     {tiers.map((tier) => (
                       <option key={tier.tierId} value={tier.tierId}>
-                        {tier.name} - {tier.cpus} CPU • {tier.memoryMb}MB RAM •{' '}
+                        {tier.name} - {tier.cpus} CPU • {tier.memoryMb}MB RAM •{" "}
                         {tier.diskGb}GB Disk • {tier.cost} credit/min
                       </option>
                     ))}
@@ -555,7 +560,7 @@ export default function CreateWorkloadPage() {
                   >
                     {artifacts.map((artifact) => (
                       <option key={artifact.version} value={artifact.version}>
-                        {artifact.version} (Built:{' '}
+                        {artifact.version} (Built:{" "}
                         {new Date(artifact.builtAt).toLocaleDateString()})
                       </option>
                     ))}
@@ -580,6 +585,23 @@ export default function CreateWorkloadPage() {
               Docker Configuration
             </h4>
 
+            <p className="text-xs mb-4">
+              <strong>Security Note:</strong> Docker tags can be overwritten,
+              which may lead to unexpected behavior or security issues. We
+              recommend using immutable SHA256 digests (e.g.,
+              image@sha256:&lt;hash&gt;) to ensure your workload always uses the
+              exact image version you intended.{" "}
+              <a
+                href="https://docs.docker.com/dhi/core-concepts/digests/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:no-underline inline-flex items-center gap-1"
+              >
+                Learn more about Docker digests
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </p>
+
             {/* Image Type Selection - Compact */}
             <div className="flex gap-3 mb-2">
               <label className="flex items-center gap-1.5 cursor-pointer">
@@ -587,8 +609,8 @@ export default function CreateWorkloadPage() {
                   type="radio"
                   name="imageType"
                   value="private"
-                  checked={imageType === 'private'}
-                  onChange={() => setImageType('private')}
+                  checked={imageType === "private"}
+                  onChange={() => setImageType("private")}
                   className="h-3 w-3"
                 />
                 <span className="text-xs">Docker Compose</span>
@@ -598,8 +620,8 @@ export default function CreateWorkloadPage() {
                   type="radio"
                   name="imageType"
                   value="public"
-                  checked={imageType === 'public'}
-                  onChange={() => setImageType('public')}
+                  checked={imageType === "public"}
+                  onChange={() => setImageType("public")}
                   className="h-3 w-3"
                 />
                 <span className="text-xs">Docker Image</span>
@@ -607,7 +629,7 @@ export default function CreateWorkloadPage() {
             </div>
 
             {/* Public Image Configuration */}
-            {imageType === 'public' && (
+            {imageType === "public" && (
               <div className="space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div>
@@ -623,7 +645,7 @@ export default function CreateWorkloadPage() {
                       className="h-7 text-xs mt-0.5"
                       style={
                         dockerImageError
-                          ? { borderColor: 'var(--nillion-destructive)' }
+                          ? { borderColor: "var(--nillion-destructive)" }
                           : {}
                       }
                     />
@@ -666,7 +688,7 @@ export default function CreateWorkloadPage() {
             )}
 
             {/* Docker Compose Configuration */}
-            {imageType === 'private' && (
+            {imageType === "private" && (
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-muted-foreground">
@@ -679,9 +701,9 @@ export default function CreateWorkloadPage() {
                     rows={5}
                     className="mt-0.5 resize-none"
                     style={{
-                      fontFamily: 'monospace',
-                      fontSize: '0.7rem',
-                      lineHeight: '1.2',
+                      fontFamily: "monospace",
+                      fontSize: "0.7rem",
+                      lineHeight: "1.2",
                     }}
                     required
                   />
@@ -793,7 +815,7 @@ export default function CreateWorkloadPage() {
                         onChange={(e) =>
                           updateDockerCredential(
                             index,
-                            'server',
+                            "server",
                             e.target.value
                           )
                         }
@@ -817,7 +839,7 @@ export default function CreateWorkloadPage() {
                         onChange={(e) =>
                           updateDockerCredential(
                             index,
-                            'username',
+                            "username",
                             e.target.value
                           )
                         }
@@ -830,7 +852,7 @@ export default function CreateWorkloadPage() {
                         onChange={(e) =>
                           updateDockerCredential(
                             index,
-                            'password',
+                            "password",
                             e.target.value
                           )
                         }
@@ -859,10 +881,10 @@ export default function CreateWorkloadPage() {
               className="border-2 border-dashed border-border rounded-md p-4 text-center mb-2 hover:border-primary/50 transition-colors"
               style={{
                 borderColor:
-                  uploadedFiles.size > 0 ? 'var(--nillion-primary)' : undefined,
+                  uploadedFiles.size > 0 ? "var(--nillion-primary)" : undefined,
                 backgroundColor:
                   uploadedFiles.size > 0
-                    ? 'var(--nillion-primary-alpha)'
+                    ? "var(--nillion-primary-alpha)"
                     : undefined,
               }}
             >
@@ -878,7 +900,7 @@ export default function CreateWorkloadPage() {
                       e.target.files && handleFileSelect(e.target.files)
                     }
                     className="hidden"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                   />
                   <Button
                     type="button"
@@ -907,7 +929,7 @@ export default function CreateWorkloadPage() {
                       e.target.files && handleFileSelect(e.target.files)
                     }
                     className="hidden"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                   />
                   <Button
                     type="button"
@@ -933,7 +955,7 @@ export default function CreateWorkloadPage() {
             {uploadedFiles.size > 0 && (
               <div className="mt-2">
                 <p className="text-xs text-muted-foreground mb-1">
-                  {uploadedFiles.size} file{uploadedFiles.size === 1 ? '' : 's'}{' '}
+                  {uploadedFiles.size} file{uploadedFiles.size === 1 ? "" : "s"}{" "}
                   selected
                 </p>
                 {filenameSanitized && (
@@ -1007,7 +1029,7 @@ export default function CreateWorkloadPage() {
                       type="text"
                       value={envVar.key}
                       onChange={(e) =>
-                        updateEnvVar(index, 'key', e.target.value)
+                        updateEnvVar(index, "key", e.target.value)
                       }
                       placeholder="KEY"
                       className="h-6 font-mono text-xs px-2"
@@ -1017,7 +1039,7 @@ export default function CreateWorkloadPage() {
                       type="text"
                       value={envVar.value}
                       onChange={(e) =>
-                        updateEnvVar(index, 'value', e.target.value)
+                        updateEnvVar(index, "value", e.target.value)
                       }
                       placeholder="value"
                       className="h-6 font-mono text-xs px-2"
@@ -1052,7 +1074,7 @@ export default function CreateWorkloadPage() {
               !name ||
               !selectedTierId ||
               loadingTiers ||
-              (imageType === 'public'
+              (imageType === "public"
                 ? !dockerImage || !!dockerImageError
                 : !dockerCompose)
             }
