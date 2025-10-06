@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useError } from '@/contexts/ErrorContext';
 import { Card, CardContent, Button, Alert } from '@/components/ui';
 import { components } from '@/styles/design-system';
 import { WorkloadResponse } from '@/lib/nilcc-types';
@@ -17,7 +16,6 @@ import {
 
 export default function WorkloadsPage() {
   const { client, apiKey } = useSettings();
-  const { addError } = useError();
   const [workloads, setWorkloads] = useState<WorkloadResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,22 +27,11 @@ export default function WorkloadsPage() {
       const data = await client.listWorkloads();
       setWorkloads(data);
     } catch (err) {
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: { data?: { errors?: string[]; error?: string }; status?: number };
-        };
-        const errorMessage = errorWithResponse.response?.data?.error || 
-          errorWithResponse.response?.data?.errors?.[0] ||
-          err.message ||
-          'Failed to fetch workloads';
-        addError(`Failed to fetch workloads: ${errorMessage}`, errorWithResponse.response?.status);
-      } else {
-        addError('Failed to fetch workloads');
-      }
+      console.error('Failed to fetch workloads:', err);
     } finally {
       setLoading(false);
     }
-  }, [client, addError]);
+  }, [client]);
 
   useEffect(() => {
     if (client) {

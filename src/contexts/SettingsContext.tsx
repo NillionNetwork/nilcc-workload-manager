@@ -84,21 +84,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [resolvedTheme]);
 
   const setApiKey = (key: string) => {
-    setApiKeyState(key);
-    setClient(new NilccClient(key, '/api', apiBaseUrl));
     if (typeof window !== 'undefined') {
       localStorage.setItem('nilcc-api-key', key);
     }
+    setApiKeyState(key);
+    setClient(new NilccClient(key, '/api', apiBaseUrl));
   };
 
   const setApiBaseUrl = (url: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nilcc-api-base-url', url);
+    }
     setApiBaseUrlState(url);
     // Recreate client with new base URL if we have an API key
     if (apiKey) {
       setClient(new NilccClient(apiKey, '/api', url));
-    }
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('nilcc-api-base-url', url);
     }
   };
 
@@ -119,21 +119,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const cycleTheme = () => {
     // Cycle through: system -> light -> dark -> system
-    const nextMode: ThemeMode = 
+    const nextMode: ThemeMode =
       themeMode === 'system' ? 'light' :
       themeMode === 'light' ? 'dark' : 'system';
     setThemeMode(nextMode);
   };
 
   return (
-    <SettingsContext.Provider value={{ 
-      apiKey, 
-      apiBaseUrl, 
-      client, 
+    <SettingsContext.Provider value={{
+      apiKey,
+      apiBaseUrl,
+      client,
       themeMode,
       resolvedTheme,
-      setApiKey, 
-      setApiBaseUrl, 
+      setApiKey,
+      setApiBaseUrl,
       clearApiKey,
       setThemeMode,
       cycleTheme

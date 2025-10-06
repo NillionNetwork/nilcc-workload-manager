@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useError } from "@/contexts/ErrorContext";
 import { Card, CardContent, Button, Input, Alert } from "@/components/ui";
 import { components } from "@/styles/design-system";
 import {
@@ -23,7 +22,6 @@ import Link from "next/link";
 export default function SettingsPage() {
   const { apiKey, apiBaseUrl, setApiKey, setApiBaseUrl, clearApiKey, client } =
     useSettings();
-  const { addError } = useError();
   const [newApiKey, setNewApiKey] = useState("");
   const [newApiBaseUrl, setNewApiBaseUrl] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
@@ -50,7 +48,9 @@ export default function SettingsPage() {
 
     if (hasChanges) {
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     }
   };
 
@@ -76,30 +76,13 @@ export default function SettingsPage() {
         setAccount(accountData);
       } catch (error) {
         console.error("Failed to fetch account:", error);
-        if (error instanceof Error) {
-          const errorWithResponse = error as Error & {
-            response?: {
-              data?: { errors?: string[]; error?: string };
-              status?: number;
-            };
-          };
-          const errorMessage =
-            errorWithResponse.response?.data?.error ||
-            errorWithResponse.response?.data?.errors?.[0] ||
-            error.message ||
-            "Unable to fetch account information";
-          addError(
-            `Failed to fetch account information: ${errorMessage}`,
-            errorWithResponse.response?.status
-          );
-        }
       } finally {
         setAccountLoading(false);
       }
     };
 
     loadAccount();
-  }, [client, apiKey, addError]);
+  }, [client, apiKey]);
 
   // Fetch workloads for credit usage history
   useEffect(() => {
@@ -112,30 +95,13 @@ export default function SettingsPage() {
         setWorkloads(workloadData);
       } catch (error) {
         console.error("Failed to fetch workloads:", error);
-        if (error instanceof Error) {
-          const errorWithResponse = error as Error & {
-            response?: {
-              data?: { errors?: string[]; error?: string };
-              status?: number;
-            };
-          };
-          const errorMessage =
-            errorWithResponse.response?.data?.error ||
-            errorWithResponse.response?.data?.errors?.[0] ||
-            error.message ||
-            "Unable to fetch workloads";
-          addError(
-            `Failed to fetch workloads for credit usage: ${errorMessage}`,
-            errorWithResponse.response?.status
-          );
-        }
       } finally {
         setWorkloadsLoading(false);
       }
     };
 
     loadWorkloads();
-  }, [client, apiKey, account?.accountId, addError]);
+  }, [client, apiKey, account?.accountId]);
 
   const fetchAccount = async () => {
     if (!client) return;
@@ -147,23 +113,6 @@ export default function SettingsPage() {
       setAccount(accountData);
     } catch (error) {
       console.error("Failed to fetch account:", error);
-      if (error instanceof Error) {
-        const errorWithResponse = error as Error & {
-          response?: {
-            data?: { errors?: string[]; error?: string };
-            status?: number;
-          };
-        };
-        const errorMessage =
-          errorWithResponse.response?.data?.error ||
-          errorWithResponse.response?.data?.errors?.[0] ||
-          error.message ||
-          "Unable to fetch account information";
-        addError(
-          `Failed to refresh account information: ${errorMessage}`,
-          errorWithResponse.response?.status
-        );
-      }
     } finally {
       setAccountLoading(false);
     }

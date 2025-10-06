@@ -5,7 +5,6 @@ import { Button } from '@/components/ui';
 import { FileText, RefreshCw, Loader2 } from 'lucide-react';
 import { NilccClient } from '@/lib/nilcc-client';
 import { WorkloadResponse } from '@/lib/nilcc-types';
-import { useError } from '@/contexts/ErrorContext';
 
 interface SystemLogsProps {
   workload: WorkloadResponse;
@@ -22,7 +21,6 @@ export default function SystemLogs({
   tailLogs,
   isActive,
 }: SystemLogsProps) {
-  const { addError } = useError();
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [systemLogsLoading, setSystemLogsLoading] = useState(false);
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -100,7 +98,6 @@ export default function SystemLogs({
         }
 
         console.error('Failed to fetch system logs:', err);
-        addError('Failed to fetch system logs');
       }
     } finally {
       setSystemLogsLoading(false);
@@ -109,7 +106,6 @@ export default function SystemLogs({
     workload.workloadId,
     workload.status,
     client,
-    addError,
     tailLogs,
     actionInProgress,
     isActive,

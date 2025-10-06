@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useError } from "@/contexts/ErrorContext";
 import {
   Card,
   CardContent,
@@ -51,7 +50,6 @@ export default function WorkloadDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { client, apiKey } = useSettings();
-  const { addError } = useError();
   const [workload, setWorkload] = useState<WorkloadResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -93,32 +91,14 @@ export default function WorkloadDetailPage() {
         const data = await client.getWorkload(id as string);
         setWorkload(data);
       } catch (err) {
-        if (err instanceof Error) {
-          const errorWithResponse = err as Error & {
-            response?: {
-              data?: { errors?: string[]; error?: string };
-              status?: number;
-            };
-          };
-          const errorMessage =
-            errorWithResponse.response?.data?.error ||
-            errorWithResponse.response?.data?.errors?.[0] ||
-            err.message ||
-            "Failed to fetch workload details";
-          addError(
-            `Failed to fetch workload details: ${errorMessage}`,
-            errorWithResponse.response?.status
-          );
-        } else {
-          addError("Failed to fetch workload details");
-        }
+        console.error("Failed to fetch workload details:", err);
       } finally {
         if (showLoader) {
           setLoading(false);
         }
       }
     },
-    [client, id, addError]
+    [client, id]
   );
 
   const fetchEvents = useCallback(async () => {
@@ -135,27 +115,10 @@ export default function WorkloadDetailPage() {
       );
     } catch (err) {
       console.error("Failed to fetch events:", err);
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: {
-            data?: { errors?: string[]; error?: string };
-            status?: number;
-          };
-        };
-        const errorMessage =
-          errorWithResponse.response?.data?.error ||
-          errorWithResponse.response?.data?.errors?.[0] ||
-          err.message ||
-          "Failed to fetch events";
-        addError(
-          `Failed to fetch workload events: ${errorMessage}`,
-          errorWithResponse.response?.status
-        );
-      }
     } finally {
       setEventsLoading(false);
     }
-  }, [client, id, addError]);
+  }, [client, id]);
 
   const fetchStats = useCallback(async () => {
     if (!client || !id || !workload || workload.status !== "running") return;
@@ -166,29 +129,10 @@ export default function WorkloadDetailPage() {
       setStats(data);
     } catch (err) {
       console.error("Failed to fetch stats:", err);
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: {
-            data?: { errors?: string[]; error?: string };
-            status?: number;
-          };
-        };
-        const errorMessage =
-          errorWithResponse.response?.data?.error ||
-          errorWithResponse.response?.data?.errors?.[0] ||
-          err.message ||
-          "Failed to fetch system stats";
-        addError(
-          `Failed to fetch workload stats: ${errorMessage}`,
-          errorWithResponse.response?.status
-        );
-      } else {
-        addError("Failed to fetch workload stats");
-      }
     } finally {
       setStatsLoading(false);
     }
-  }, [client, id, workload, addError]);
+  }, [client, id, workload]);
 
   useEffect(() => {
     if (client && id) {
@@ -255,25 +199,7 @@ export default function WorkloadDetailPage() {
     } catch (err) {
       setActionInProgress(false);
       setStartingWorkload(false);
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: {
-            data?: { errors?: string[]; error?: string };
-            status?: number;
-          };
-        };
-        const errorMessage =
-          errorWithResponse.response?.data?.error ||
-          errorWithResponse.response?.data?.errors?.[0] ||
-          err.message ||
-          "Failed to start workload";
-        addError(
-          `Failed to start workload: ${errorMessage}`,
-          errorWithResponse.response?.status
-        );
-      } else {
-        addError("Failed to start workload");
-      }
+      console.error("Failed to start workload:", err);
     }
   };
 
@@ -349,25 +275,7 @@ export default function WorkloadDetailPage() {
     } catch (err) {
       setConfirmModal((prev) => ({ ...prev, loading: false }));
       setActionInProgress(false);
-      if (err instanceof Error) {
-        const errorWithResponse = err as Error & {
-          response?: {
-            data?: { errors?: string[]; error?: string };
-            status?: number;
-          };
-        };
-        const errorMessage =
-          errorWithResponse.response?.data?.error ||
-          errorWithResponse.response?.data?.errors?.[0] ||
-          err.message ||
-          `Failed to ${confirmModal.action} workload`;
-        addError(
-          `Failed to ${confirmModal.action} workload: ${errorMessage}`,
-          errorWithResponse.response?.status
-        );
-      } else {
-        addError(`Failed to ${confirmModal.action} workload`);
-      }
+      console.error(`Failed to ${confirmModal.action} workload:`, err);
     }
   };
 

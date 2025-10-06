@@ -5,7 +5,6 @@ import { Tabs, Tab } from '@/components/ui';
 import { FileText, Terminal } from 'lucide-react';
 import { NilccClient } from '@/lib/nilcc-client';
 import { WorkloadResponse, Container } from '@/lib/nilcc-types';
-import { useError } from '@/contexts/ErrorContext';
 import SystemLogs from './SystemLogs';
 import ContainerLogs from './ContainerLogs';
 
@@ -26,7 +25,6 @@ export default function LogsSection({
   startingWorkload,
   tailLogs,
 }: LogsSectionProps) {
-  const { addError } = useError();
   const [containers, setContainers] = useState<Container[]>([]);
 
   // Calculate if any action is in progress
@@ -56,14 +54,12 @@ export default function LogsSection({
         }
 
         console.error('Failed to fetch containers:', err);
-        addError('Failed to fetch containers');
       }
     }
   }, [
     workload.workloadId,
     workload.status,
     client,
-    addError,
     anyActionInProgress,
   ]);
 

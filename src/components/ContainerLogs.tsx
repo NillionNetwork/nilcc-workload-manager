@@ -5,7 +5,6 @@ import { Button, Tabs, Tab } from '@/components/ui';
 import { Terminal, RefreshCw, Loader2 } from 'lucide-react';
 import { NilccClient } from '@/lib/nilcc-client';
 import { WorkloadResponse, Container } from '@/lib/nilcc-types';
-import { useError } from '@/contexts/ErrorContext';
 
 interface ContainerLogsProps {
   workload: WorkloadResponse;
@@ -24,7 +23,6 @@ export default function ContainerLogs({
   tailLogs,
   isActive,
 }: ContainerLogsProps) {
-  const { addError } = useError();
   const [containerLogs, setContainerLogs] = useState<
     Record<string, Record<'stdout' | 'stderr', string[]>>
   >({});
@@ -98,9 +96,6 @@ export default function ContainerLogs({
             `Failed to fetch ${stream} logs for container ${containerName}:`,
             err
           );
-          addError(
-            `Failed to fetch ${stream} logs for container ${containerName}`
-          );
         }
       } finally {
         setContainerLogsLoading((prev) => ({ ...prev, [stream]: false }));
@@ -110,7 +105,6 @@ export default function ContainerLogs({
       workload.workloadId,
       workload.status,
       client,
-      addError,
       tailLogs,
       actionInProgress,
       isActive,

@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { SettingsProvider } from '@/contexts/SettingsContext';
-import { ErrorProvider } from '@/contexts/ErrorContext';
-import { ErrorBanner } from '@/components/ErrorBanner';
 import Navbar from '@/components/Navbar';
 
 const geistSans = Geist({
@@ -51,21 +49,18 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <ErrorProvider>
-          <SettingsProvider>
-            <ErrorBanner />
-            <Navbar />
-            <main
-              style={{
-                maxWidth: '1280px',
-                margin: '0 auto',
-                padding: '1.5rem 1rem',
-              }}
-            >
-              {children}
-            </main>
-          </SettingsProvider>
-        </ErrorProvider>
+        <SettingsProvider>
+          <Navbar />
+          <main
+            style={{
+              maxWidth: '1280px',
+              margin: '0 auto',
+              padding: '1.5rem 1rem',
+            }}
+          >
+            {children}
+          </main>
+        </SettingsProvider>
       </body>
     </html>
   );
