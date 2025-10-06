@@ -279,7 +279,7 @@ export default function SettingsPage() {
                 type="password"
                 value={newApiKey}
                 onChange={(e) => setNewApiKey(e.target.value)}
-                placeholder="Enter your NilCC API key"
+                placeholder="Your NilCC API key"
                 className="font-mono h-8 text-sm mt-0.5"
               />
             </div>
