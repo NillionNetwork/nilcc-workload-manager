@@ -41,7 +41,9 @@ export default function SettingsPage() {
     }
 
     if (newApiBaseUrl.trim() && newApiBaseUrl.trim() !== apiBaseUrl) {
-      setApiBaseUrl(newApiBaseUrl.trim());
+      // Remove trailing slash if present
+      const cleanedUrl = newApiBaseUrl.trim().replace(/\/$/, '');
+      setApiBaseUrl(cleanedUrl);
       setNewApiBaseUrl("");
       hasChanges = true;
     }
