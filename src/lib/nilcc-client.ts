@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
-import { 
-  CreateWorkloadRequest, 
+import {
+  CreateWorkloadRequest,
   WorkloadResponse,
   Container,
   WorkloadContainerLogsRequest,
@@ -10,7 +10,7 @@ import {
   Account,
   ListWorkloadEventsResponse,
   SystemStats,
-  Artifact
+  Artifact,
 } from './nilcc-types';
 import { DEFAULT_NILCC_API_BASE } from './constants';
 
@@ -20,12 +20,16 @@ export class NilccClient {
   private readonly nilccApiBaseUrl: string;
   private readonly headers: Record<string, string>;
 
-  constructor(apiKey: string, baseUrl: string = '/api', nilccApiBaseUrl?: string) {
+  constructor(
+    apiKey: string,
+    baseUrl: string = '/api',
+    nilccApiBaseUrl?: string
+  ) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
     this.nilccApiBaseUrl = nilccApiBaseUrl || DEFAULT_NILCC_API_BASE;
     this.headers = {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'x-api-base-url': this.nilccApiBaseUrl,
     };
@@ -42,10 +46,9 @@ export class NilccClient {
   }
 
   async deleteWorkload(workloadId: string): Promise<void> {
-    await axios.delete(
-      `${this.baseUrl}/workloads/${workloadId}`,
-      { headers: this.headers }
-    );
+    await axios.delete(`${this.baseUrl}/workloads/${workloadId}`, {
+      headers: this.headers,
+    });
   }
 
   async getWorkload(workloadId: string): Promise<WorkloadResponse> {
@@ -76,7 +79,9 @@ export class NilccClient {
     return response.data;
   }
 
-  async getContainerLogs(request: WorkloadContainerLogsRequest): Promise<LogsResponse> {
+  async getContainerLogs(
+    request: WorkloadContainerLogsRequest
+  ): Promise<LogsResponse> {
     const response: AxiosResponse<LogsResponse> = await axios.post(
       `${this.baseUrl}/workloads/${request.workloadId}/containers/logs`,
       request,
@@ -86,7 +91,9 @@ export class NilccClient {
     return response.data;
   }
 
-  async getSystemLogs(request: WorkloadSystemLogsRequest): Promise<LogsResponse> {
+  async getSystemLogs(
+    request: WorkloadSystemLogsRequest
+  ): Promise<LogsResponse> {
     const response: AxiosResponse<LogsResponse> = await axios.post(
       `${this.baseUrl}/workloads/${request.workloadId}/logs`,
       request,
@@ -114,22 +121,6 @@ export class NilccClient {
     return response.data;
   }
 
-  async startWorkload(workloadId: string): Promise<void> {
-    await axios.post(
-      `${this.baseUrl}/workloads/start`,
-      { workloadId },
-      { headers: this.headers }
-    );
-  }
-
-  async stopWorkload(workloadId: string): Promise<void> {
-    await axios.post(
-      `${this.baseUrl}/workloads/stop`,
-      { workloadId },
-      { headers: this.headers }
-    );
-  }
-
   async restartWorkload(workloadId: string): Promise<void> {
     await axios.post(
       `${this.baseUrl}/workloads/restart`,
@@ -138,12 +129,15 @@ export class NilccClient {
     );
   }
 
-  async listWorkloadEvents(workloadId: string): Promise<ListWorkloadEventsResponse> {
-    const response: AxiosResponse<ListWorkloadEventsResponse> = await axios.post(
-      `${this.baseUrl}/workload-events/list`,
-      { workloadId },
-      { headers: this.headers }
-    );
+  async listWorkloadEvents(
+    workloadId: string
+  ): Promise<ListWorkloadEventsResponse> {
+    const response: AxiosResponse<ListWorkloadEventsResponse> =
+      await axios.post(
+        `${this.baseUrl}/workload-events/list`,
+        { workloadId },
+        { headers: this.headers }
+      );
 
     return response.data;
   }
