@@ -36,8 +36,6 @@ import {
   Copy,
   Check,
   CreditCard,
-  Play,
-  Square,
   RotateCw,
   Activity,
   Loader2,
@@ -45,6 +43,47 @@ import {
   EyeOff,
   Package,
 } from 'lucide-react';
+
+type WorkloadStatus = WorkloadResponse['status'];
+
+const STATUS_VARIANTS: Record<WorkloadStatus, 'success' | 'warning' | 'danger' | 'neutral'> =
+  {
+    running: 'success',
+    starting: 'warning',
+    scheduled: 'warning',
+    awaitingCert: 'warning',
+    error: 'danger',
+    stopped: 'neutral',
+  };
+
+const AUTO_REFRESH_STATUSES = new Set<WorkloadStatus>([
+  'starting',
+  'scheduled',
+  'awaitingCert',
+]);
+const FAST_REFRESH_STATUSES = new Set<WorkloadStatus>(['scheduled', 'awaitingCert']);
+const LOADING_SPINNER_STATUSES = new Set<WorkloadStatus>(['starting', 'awaitingCert']);
+const TAILABLE_STATUSES = new Set<WorkloadStatus>(['running', 'awaitingCert']);
+
+const STATUS_ALERTS: Partial<
+  Record<
+    WorkloadStatus,
+    {
+      title: string;
+      message: string;
+    }
+  >
+> = {
+  starting: {
+    title: 'Deployment in Progress',
+    message: 'Your workload is being deployed to nilCC. This typically takes 3-6 minutes.',
+  },
+  awaitingCert: {
+    title: 'Awaiting Certificate',
+    message:
+      'Your workload is waiting for SSL certificate provisioning. This usually completes within a few moments.',
+  },
+};
 
 export default function WorkloadDetailPage() {
   const { id } = useParams();
@@ -69,7 +108,6 @@ export default function WorkloadDetailPage() {
   }>({ isOpen: false, action: null, loading: false });
   const [confirmName, setConfirmName] = useState('');
   const [actionInProgress, setActionInProgress] = useState(false);
-  const [stoppingWorkload, setStoppingWorkload] = useState(false);
   const [startingWorkload, setStartingWorkload] = useState(false);
 
   // Events state
@@ -79,6 +117,21 @@ export default function WorkloadDetailPage() {
   // Stats state
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+
+  const status = workload?.status;
+  const isRunning = status === 'running';
+  const statusBadgeVariant = status ? STATUS_VARIANTS[status] : 'neutral';
+  const showStatusSpinner = status ? LOADING_SPINNER_STATUSES.has(status) : false;
+  const showTailLogsToggle = status ? TAILABLE_STATUSES.has(status) : false;
+  const statusAlert = status ? STATUS_ALERTS[status] : undefined;
+  const shouldAutoRefresh = status ? AUTO_REFRESH_STATUSES.has(status) : false;
+  const refreshDelay = status && FAST_REFRESH_STATUSES.has(status) ? 3000 : 15000;
+  const shouldHideLogs =
+    startingWorkload ||
+    actionInProgress ||
+    confirmModal.action === 'delete' ||
+    confirmModal.action === 'restart';
+  const shouldLoadStats = Boolean(client && id && isRunning && !actionInProgress);
 
   const fetchWorkload = useCallback(
     async (showLoader = true) => {
@@ -145,41 +198,24 @@ export default function WorkloadDetailPage() {
 
   // Fetch stats when workload is running (only on initial load or refresh)
   useEffect(() => {
-    if (
-      workload &&
-      workload.status === 'running' &&
-      client &&
-      id &&
-      !actionInProgress
-    ) {
+    if (shouldLoadStats) {
       fetchStats();
     }
-  }, [workload, client, id, actionInProgress, fetchStats]);
+  }, [shouldLoadStats, fetchStats]);
 
   // Auto-refresh only when workload is starting, scheduled, or awaitingCert
   useEffect(() => {
-    if (
-      !client ||
-      !id ||
-      (workload?.status !== 'starting' &&
-        workload?.status !== 'scheduled' &&
-        workload?.status !== 'awaitingCert')
-    )
+    if (!client || !id || !shouldAutoRefresh) {
       return;
-
-    // Different intervals for different states
-    const refreshInterval =
-      workload?.status === 'scheduled' || workload?.status === 'awaitingCert'
-        ? 3000
-        : 15000;
+    }
 
     const interval = setInterval(() => {
       fetchWorkload(false); // Don't show loader for auto-refresh
       fetchEvents();
-    }, refreshInterval);
+    }, refreshDelay);
 
     return () => clearInterval(interval);
-  }, [client, id, workload?.status, fetchWorkload, fetchEvents]);
+  }, [client, id, shouldAutoRefresh, refreshDelay, fetchWorkload, fetchEvents]);
 
   const handleAction = async (action: 'delete' | 'restart') => {
     if (!client || !workload) return;
@@ -232,21 +268,6 @@ export default function WorkloadDetailPage() {
       setConfirmModal((prev) => ({ ...prev, loading: false }));
       setActionInProgress(false);
       console.error(`Failed to ${confirmModal.action} workload:`, err);
-    }
-  };
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'running':
-        return 'success';
-      case 'starting':
-      case 'scheduled':
-      case 'awaitingCert':
-        return 'warning';
-      case 'error':
-        return 'danger';
-      default:
-        return 'neutral';
     }
   };
 
@@ -328,10 +349,9 @@ export default function WorkloadDetailPage() {
                       Status
                     </h4>
                     <div className="flex items-center space-x-2">
-                      <Badge variant={getStatusVariant(workload.status)}>
+                      <Badge variant={statusBadgeVariant}>
                         <span className="flex items-center gap-1">
-                          {(workload.status === 'starting' ||
-                            workload.status === 'awaitingCert') && (
+                          {showStatusSpinner && (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           )}
                           {workload.status}
@@ -438,32 +458,13 @@ export default function WorkloadDetailPage() {
                     </div>
                   )}
 
-                  {workload.status === 'starting' && (
+                  {statusAlert && (
                     <Alert variant="info" className="mt-4">
                       <div className="flex items-start">
                         <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="font-medium">Deployment in Progress</p>
-                          <p className="text-sm mt-1">
-                            Your workload is being deployed to nilCC. This
-                            typically takes 3-6 minutes.
-                          </p>
-                        </div>
-                      </div>
-                    </Alert>
-                  )}
-
-                  {workload.status === 'awaitingCert' && (
-                    <Alert variant="info" className="mt-4">
-                      <div className="flex items-start">
-                        <Monitor className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium">Awaiting Certificate</p>
-                          <p className="text-sm mt-1">
-                            Your workload is waiting for SSL certificate
-                            provisioning. This usually completes within a few
-                            moments.
-                          </p>
+                          <p className="font-medium">{statusAlert.title}</p>
+                          <p className="text-sm mt-1">{statusAlert.message}</p>
                         </div>
                       </div>
                     </Alert>
@@ -604,43 +605,37 @@ export default function WorkloadDetailPage() {
               )}
 
               {/* Logs Section - Hide when restarting, or during delete action */}
-              {!stoppingWorkload &&
-                !startingWorkload &&
-                !actionInProgress &&
-                confirmModal.action !== 'delete' &&
-                confirmModal.action !== 'restart' && (
-                  <Card>
-                    <CardContent>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-semibold text-card-foreground">
-                          Logs
-                        </h4>
-                        {(workload.status === 'running' ||
-                          workload.status === 'awaitingCert') && (
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={tailLogs}
-                              onChange={(e) => setTailLogs(e.target.checked)}
-                            />
-                            <span className="text-muted-foreground">
-                              Tail logs
-                            </span>
-                          </label>
-                        )}
-                      </div>
+              {!shouldHideLogs && (
+                <Card>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-card-foreground">
+                        Logs
+                      </h4>
+                      {showTailLogsToggle && (
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={tailLogs}
+                            onChange={(e) => setTailLogs(e.target.checked)}
+                          />
+                          <span className="text-muted-foreground">
+                            Tail logs
+                          </span>
+                        </label>
+                      )}
+                    </div>
 
-                      <LogsSection
-                        workload={workload}
-                        client={client}
-                        actionInProgress={actionInProgress}
-                        stoppingWorkload={stoppingWorkload}
-                        startingWorkload={startingWorkload}
-                        tailLogs={tailLogs}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
+                    <LogsSection
+                      workload={workload}
+                      client={client}
+                      actionInProgress={actionInProgress}
+                      startingWorkload={startingWorkload}
+                      tailLogs={tailLogs}
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Sidebar */}
@@ -744,7 +739,7 @@ export default function WorkloadDetailPage() {
               </Card>
 
               {/* System Stats */}
-              {workload.status === 'running' && (
+              {isRunning && (
                 <WorkloadStats
                   stats={stats}
                   loading={statsLoading}

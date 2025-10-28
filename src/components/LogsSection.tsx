@@ -12,7 +12,6 @@ interface LogsSectionProps {
   workload: WorkloadResponse;
   client: NilccClient;
   actionInProgress: boolean;
-  stoppingWorkload: boolean;
   startingWorkload: boolean;
   tailLogs: boolean;
 }
@@ -21,15 +20,13 @@ export default function LogsSection({
   workload,
   client,
   actionInProgress,
-  stoppingWorkload,
   startingWorkload,
   tailLogs,
 }: LogsSectionProps) {
   const [containers, setContainers] = useState<Container[]>([]);
 
   // Calculate if any action is in progress
-  const anyActionInProgress =
-    actionInProgress || stoppingWorkload || startingWorkload;
+  const anyActionInProgress = actionInProgress || startingWorkload;
 
   const fetchContainers = useCallback(async () => {
     if (
