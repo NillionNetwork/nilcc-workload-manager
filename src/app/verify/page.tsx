@@ -83,10 +83,10 @@ export default function VerifyPage() {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (!res.ok || data?.success !== true) {
         setVerified(false);
       } else {
-        setVerified(Boolean(data?.verified));
+        setVerified(Boolean(data?.proof_of_cloud));
       }
     } catch {
       setVerified(false);

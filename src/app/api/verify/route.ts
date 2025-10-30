@@ -31,7 +31,11 @@ export async function POST(request: NextRequest) {
     const vcpus = String(body.vcpus ?? '').trim();
 
     if (!measurementHashInput || !dockerComposeHash || !nilccVersion || !vcpus) {
-      return NextResponse.json({ verified: false });
+      return NextResponse.json({
+        success: false,
+        error: 'invalid_request',
+        message: 'measurementHash, dockerComposeHash, nilccVersion, and vcpus are required'
+      });
     }
 
     const args = [
@@ -51,15 +55,32 @@ export async function POST(request: NextRequest) {
 
     const { stdout, code } = await runDocker(args);
     if (code !== 0) {
-      return NextResponse.json({ verified: false });
+      return NextResponse.json({
+        success: false,
+        error: 'verification_failed',
+        message: 'Measurement hash verification failed'
+      });
     }
 
     const computedMeasurementHash = stdout.trim();
     const verified = computedMeasurementHash === measurementHashInput;
 
-    return NextResponse.json({ verified });
+    return NextResponse.json({
+      success: true,
+      quote: {
+        verified,
+        header: {
+          tee_type: 'TEE_AMD_SEV_SNP'
+        }
+      },
+      proof_of_cloud: verified
+    });
   } catch {
-    return NextResponse.json({ verified: false });
+    return NextResponse.json({
+      success: false,
+      error: 'verification_failed',
+      message: 'Measurement hash verification failed'
+    });
   }
 }
 
