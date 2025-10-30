@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, Layers, Plus } from "lucide-react";
+import { Settings, Layers, Plus, CheckCircle } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Badge, Button, ThemeToggleSlider } from "@/components/ui";
 
@@ -25,6 +25,7 @@ export default function Navbar() {
   const navigation = [
     { name: "Workloads", href: "/workloads", icon: Layers },
     { name: "Create", href: "/workloads/create", icon: Plus },
+    { name: "Verify", href: "/verify", icon: CheckCircle },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
