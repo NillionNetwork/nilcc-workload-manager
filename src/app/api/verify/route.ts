@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       vcpus,
     ];
 
-    const { stdout, stderr, code } = await runDocker(args);
+    const { stdout, code } = await runDocker(args);
     if (code !== 0) {
       return NextResponse.json({ verified: false });
     }
