@@ -55,11 +55,10 @@ jobs:
             echo "❌ Measurement hash verification failed"
             echo "Expected: ${{ inputs.measurement_hash }}"
             echo "Computed: $COMPUTED_HASH"
-            exit 1
           fi
       
       - name: Output result
         run: |
           echo "Computed hash: ${{ steps.verify.outputs.computed_hash }}"
-          echo "Verified: ${{ steps.verify.outputs.verified }}"
+          echo "VERIFICATION_RESULT: ${{ steps.verify.outputs.verified }}"
 

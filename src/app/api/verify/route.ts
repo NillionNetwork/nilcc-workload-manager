@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     const maxAttempts = 10;
     let attempts = 0;
     let status = 'queued';
-    let conclusion: string | null = null;
+    let verified = false;
 
     while (attempts < maxAttempts && status !== 'completed') {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between checks
@@ -137,9 +137,45 @@ export async function POST(request: NextRequest) {
       if (runResponse.ok) {
         const runData = await runResponse.json();
         status = runData.status;
-        conclusion = runData.conclusion;
         
         if (status === 'completed') {
+          // Fetch job to get logs and parse the verification result
+          const jobsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}/jobs`;
+          const jobsResponse = await fetch(jobsUrl, {
+            headers: {
+              'Authorization': `Bearer ${githubToken}`,
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+            },
+          });
+
+          if (jobsResponse.ok) {
+            const jobsData = await jobsResponse.json();
+            const job = jobsData.jobs?.[0];
+            
+            if (job) {
+              // Get the job logs to parse the verification result
+              const logsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/jobs/${job.id}/logs`;
+              const logsResponse = await fetch(logsUrl, {
+                headers: {
+                  'Authorization': `Bearer ${githubToken}`,
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                },
+              });
+
+              if (logsResponse.ok) {
+                const logsText = await logsResponse.text();
+                // Parse the verified status from the logs
+                // The "Output result" step prints: "VERIFICATION_RESULT: true" or "VERIFICATION_RESULT: false"
+                const verifiedMatch = logsText.match(/VERIFICATION_RESULT:\s*(true|false)/i);
+                if (verifiedMatch) {
+                  verified = verifiedMatch[1].toLowerCase() === 'true';
+                }
+              }
+            }
+          }
+          
           break;
         }
       }
@@ -147,11 +183,6 @@ export async function POST(request: NextRequest) {
       attempts++;
     }
 
-    // Determine verification result
-    let verified = false;
-    if (status === 'completed' && conclusion === 'success') {
-      verified = true;
-    }
 
     return NextResponse.json({
       success: true,
