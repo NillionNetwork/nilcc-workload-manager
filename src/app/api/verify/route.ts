@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
 
     // Check for required environment variables
     const githubToken = process.env.GITHUB_TOKEN;
-    const githubBranch = process.env.GITHUB_BRANCH || 'main';
     const owner = 'NillionNetwork';
     const repo = 'nilcc-workload-manager';
+    const branch = 'main';
 
     if (!githubToken) {
       return NextResponse.json({
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         'X-GitHub-Api-Version': '2022-11-28',
       },
       body: JSON.stringify({
-        ref: githubBranch,
+        ref: branch,
         inputs: {
           docker_compose_hash: dockerComposeHash,
           nilcc_version: nilccVersion,
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Fetch the most recent run for this workflow and branch
-    const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?branch=${githubBranch}&per_page=1`;
+    const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?branch=${branch}&per_page=1`;
     const runsResponse = await fetch(runsUrl, {
       headers: {
         'Authorization': `Bearer ${githubToken}`,
