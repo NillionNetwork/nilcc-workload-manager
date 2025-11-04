@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
     const workflowId = 'verify-measurement.yml';
     const workflowUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`;
 
+    // Record timestamp before dispatching to find the exact run we create
+    const beforeDispatch = new Date().toISOString();
+
     const dispatchResponse = await fetch(workflowUrl, {
       method: 'POST',
       headers: {
@@ -71,35 +74,45 @@ export async function POST(request: NextRequest) {
       }, { status: dispatchResponse.status });
     }
 
-    // Wait a moment for the workflow run to be created, then fetch the run ID
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Fetch the most recent run for this workflow and branch
-    const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?branch=${branch}&per_page=1`;
-    const runsResponse = await fetch(runsUrl, {
-      headers: {
-        'Authorization': `Bearer ${githubToken}`,
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    });
+    // Poll for the run we just created by checking runs created after our dispatch
+    // GitHub API doesn't return run_id from dispatch, so we need to find it
+    let runId: number | null = null;
+    let findAttempts = 0;
+    const maxFindAttempts = 10;
 
-    if (!runsResponse.ok) {
-      return NextResponse.json({
-        success: false,
-        error: 'workflow_run_fetch_failed',
-        message: 'Failed to fetch workflow run ID'
-      }, { status: runsResponse.status });
+    while (!runId && findAttempts < maxFindAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between checks
+      
+      const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?branch=${branch}&per_page=5`;
+      const runsResponse = await fetch(runsUrl, {
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (runsResponse.ok) {
+        const runsData = await runsResponse.json();
+        // Find the run that was created after we dispatched (matches our timestamp)
+        const ourRun = runsData.workflow_runs?.find((run: any) => {
+          return new Date(run.created_at) >= new Date(beforeDispatch);
+        });
+        
+        if (ourRun) {
+          runId = ourRun.id;
+          break;
+        }
+      }
+      
+      findAttempts++;
     }
-
-    const runsData = await runsResponse.json();
-    const runId = runsData.workflow_runs?.[0]?.id;
 
     if (!runId) {
       return NextResponse.json({
         success: false,
         error: 'workflow_run_not_found',
-        message: 'Workflow was triggered but run ID could not be determined'
+        message: 'Workflow was triggered but run ID could not be determined. The run may not have been created yet.'
       });
     }
 
