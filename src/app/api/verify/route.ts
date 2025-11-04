@@ -9,6 +9,13 @@ interface VerifyRequestBody {
   vcpus: number | string;
 }
 
+interface GitHubWorkflowRun {
+  id: number;
+  created_at: string;
+  status: string;
+  conclusion: string | null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as VerifyRequestBody;
@@ -95,7 +102,7 @@ export async function POST(request: NextRequest) {
       if (runsResponse.ok) {
         const runsData = await runsResponse.json();
         // Find the run that was created after we dispatched (matches our timestamp)
-        const ourRun = runsData.workflow_runs?.find((run: any) => {
+        const ourRun = runsData.workflow_runs?.find((run: GitHubWorkflowRun) => {
           return new Date(run.created_at) >= new Date(beforeDispatch);
         });
         
