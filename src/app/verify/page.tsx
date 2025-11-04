@@ -28,6 +28,12 @@ export default function VerifyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [verified, setVerified] = useState<boolean | null>(null);
+  
+  // Workflow polling state
+  const [workflowRunId, setWorkflowRunId] = useState<number | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<string | null>(null);
+  const [workflowUrl, setWorkflowUrl] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
 
   // Fetch tiers
   useEffect(() => {
@@ -65,10 +71,51 @@ export default function VerifyPage() {
 
   const selectedTier = tiers.find((t) => t.tierId === selectedTierId);
 
+  // Poll workflow status
+  useEffect(() => {
+    if (!workflowRunId || !polling) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/verify/monitor-workflow?run_id=${workflowRunId}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setWorkflowStatus(data.status);
+          if (data.html_url) {
+            setWorkflowUrl(data.html_url);
+          }
+
+          if (data.status === 'completed') {
+            setPolling(false);
+            setSubmitting(false);
+            setVerified(data.verified);
+            setModalOpen(true);
+          } else if (data.status === 'cancelled' || (data.conclusion && data.conclusion !== 'success' && data.conclusion !== 'failure')) {
+            setPolling(false);
+            setSubmitting(false);
+            setVerified(false);
+            setModalOpen(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling workflow:', error);
+        // Continue polling on error
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [workflowRunId, polling]);
+
   const onVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setVerified(null);
+    setWorkflowRunId(null);
+    setWorkflowStatus(null);
+    setWorkflowUrl(null);
+    setPolling(false);
+    
     try {
       const effectiveNilccVersion = apiKey ? selectedArtifactVersion : nilccVersionInput;
       const effectiveVcpus = apiKey ? (selectedTier?.cpus ?? 0) : parseInt(vcpusInput || '0', 10);
@@ -85,12 +132,23 @@ export default function VerifyPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data?.success !== true) {
         setVerified(false);
+        setSubmitting(false);
+        setModalOpen(true);
       } else {
-        setVerified(Boolean(data?.proof_of_cloud));
+        // Workflow triggered successfully, start polling
+        if (data.workflow_run_id) {
+          setWorkflowRunId(data.workflow_run_id);
+          setPolling(true);
+          setWorkflowStatus(data.status || 'queued');
+        } else {
+          // Fallback: if no workflow run ID, treat as immediate failure
+          setVerified(false);
+          setSubmitting(false);
+          setModalOpen(true);
+        }
       }
     } catch {
       setVerified(false);
-    } finally {
       setSubmitting(false);
       setModalOpen(true);
     }
@@ -225,15 +283,30 @@ export default function VerifyPage() {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-end pt-2">
+        <div className="flex items-center justify-end pt-2 gap-2">
+          {polling && workflowStatus && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Status: {workflowStatus}</span>
+              {workflowUrl && (
+                <a
+                  href={workflowUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  View workflow
+                </a>
+              )}
+            </div>
+          )}
           <Button
             type="submit"
             loading={submitting}
             disabled={
-              submitting || (apiKey ? (!selectedTierId || loadingTiers || loadingArtifacts) : (!nilccVersionInput || !vcpusInput))
+              submitting || polling || (apiKey ? (!selectedTierId || loadingTiers || loadingArtifacts) : (!nilccVersionInput || !vcpusInput))
             }
           >
-            Verify
+            {polling ? 'Verifying...' : 'Verify'}
           </Button>
         </div>
       </form>
@@ -244,10 +317,34 @@ export default function VerifyPage() {
         title={"Verification Result"}
       >
         {verified === true && (
-          <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+          <div className="space-y-2">
+            <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+            {workflowUrl && (
+              <a
+                href={workflowUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline"
+              >
+                View workflow run
+              </a>
+            )}
+          </div>
         )}
         {verified === false && (
-          <p className="text-sm text-destructive">Could not verify measurement hash.</p>
+          <div className="space-y-2">
+            <p className="text-sm text-destructive">Could not verify measurement hash.</p>
+            {workflowUrl && (
+              <a
+                href={workflowUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline"
+              >
+                View workflow run for details
+              </a>
+            )}
+          </div>
         )}
       </Modal>
     </div>
