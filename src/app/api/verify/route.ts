@@ -140,7 +140,6 @@ export async function POST(request: NextRequest) {
       verified = true;
     }
 
-    // Return in the original format
     return NextResponse.json({
       success: true,
       quote: {
@@ -151,8 +150,7 @@ export async function POST(request: NextRequest) {
       },
       proof_of_cloud: verified
     });
-  } catch (error) {
-    console.error('Error triggering workflow:', error);
+  } catch {
     return NextResponse.json({
       success: false,
       error: 'verification_failed',
