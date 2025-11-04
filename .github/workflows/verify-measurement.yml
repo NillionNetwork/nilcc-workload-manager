@@ -1,0 +1,65 @@
+name: Verify Measurement Hash
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker_compose_hash:
+        description: 'Docker Compose Hash'
+        required: true
+        type: string
+      nilcc_version:
+        description: 'NILCC Version'
+        required: true
+        type: string
+      vcpus:
+        description: 'Number of VCPUs'
+        required: true
+        type: string
+      measurement_hash:
+        description: 'Expected Measurement Hash (for validation)'
+        required: true
+        type: string
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      computed_hash: ${{ steps.verify.outputs.computed_hash }}
+      verified: ${{ steps.verify.outputs.verified }}
+    steps:
+      - name: Run nilcc-verifier
+        id: verify
+        run: |
+          # Run the Docker container and capture output (both stdout and stderr)
+          OUTPUT=$(docker run \
+            -v /tmp/nilcc-verifier-cache:/tmp/nilcc-verifier-cache \
+            --rm \
+            ghcr.io/nillionnetwork/nilcc-verifier:latest \
+            measurement-hash \
+            "${{ inputs.docker_compose_hash }}" \
+            "${{ inputs.nilcc_version }}" \
+            --vm-type cpu \
+            --cpus "${{ inputs.vcpus }}" 2>&1)
+          
+          # Extract the computed hash (last line, trimmed)
+          COMPUTED_HASH=$(echo "$OUTPUT" | tail -1 | tr -d '\n\r ')
+          echo "computed_hash=$COMPUTED_HASH" >> $GITHUB_OUTPUT
+          echo "Computed hash: $COMPUTED_HASH"
+          
+          # Compare with expected hash
+          if [ "$COMPUTED_HASH" = "${{ inputs.measurement_hash }}" ]; then
+            echo "verified=true" >> $GITHUB_OUTPUT
+            echo "✅ Measurement hash verified successfully"
+          else
+            echo "verified=false" >> $GITHUB_OUTPUT
+            echo "❌ Measurement hash verification failed"
+            echo "Expected: ${{ inputs.measurement_hash }}"
+            echo "Computed: $COMPUTED_HASH"
+            exit 1
+          fi
+      
+      - name: Output result
+        run: |
+          echo "Computed hash: ${{ steps.verify.outputs.computed_hash }}"
+          echo "Verified: ${{ steps.verify.outputs.verified }}"
+

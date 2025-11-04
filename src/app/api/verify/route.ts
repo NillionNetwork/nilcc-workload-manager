@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { spawn } from 'node:child_process';
 
 export const runtime = 'nodejs';
 
@@ -8,18 +7,6 @@ interface VerifyRequestBody {
   dockerComposeHash: string;
   nilccVersion: string;
   vcpus: number | string;
-}
-
-function runDocker(args: string[]): Promise<{ stdout: string; stderr: string; code: number | null }>{
-  return new Promise((resolve) => {
-    const child = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (d) => { stdout += d.toString(); });
-    child.stderr.on('data', (d) => { stderr += d.toString(); });
-    child.on('close', (code) => resolve({ stdout, stderr, code }));
-  });
 }
 
 export async function POST(request: NextRequest) {
@@ -38,32 +25,120 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const args = [
-      'run',
-      '-v',
-      '/tmp/nilcc-verifier-cache:/tmp/nilcc-verifier-cache',
-      '--rm',
-      'ghcr.io/nillionnetwork/nilcc-verifier:latest',
-      'measurement-hash',
-      dockerComposeHash,
-      nilccVersion,
-      '--vm-type',
-      'cpu',
-      '--cpus',
-      vcpus,
-    ];
+    // Check for required environment variables
+    const githubToken = process.env.GITHUB_TOKEN;
+    const owner = 'NillionNetwork';
+    const repo = 'nilcc-workload-manager';
+    const branch = 'main';
 
-    const { stdout, code } = await runDocker(args);
-    if (code !== 0) {
+    if (!githubToken) {
       return NextResponse.json({
         success: false,
-        error: 'verification_failed',
-        message: 'Measurement hash verification failed'
+        error: 'configuration_error',
+        message: 'GITHUB_TOKEN environment variable is not set'
+      }, { status: 500 });
+    }
+
+    // Trigger GitHub Action workflow
+    const workflowId = 'verify-measurement.yml';
+    const workflowUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`;
+
+    const dispatchResponse = await fetch(workflowUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${githubToken}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({
+        ref: branch,
+        inputs: {
+          docker_compose_hash: dockerComposeHash,
+          nilcc_version: nilccVersion,
+          vcpus: vcpus,
+          measurement_hash: measurementHashInput,
+        },
+      }),
+    });
+
+    if (!dispatchResponse.ok) {
+      const errorText = await dispatchResponse.text();
+      return NextResponse.json({
+        success: false,
+        error: 'workflow_trigger_failed',
+        message: `Failed to trigger workflow: ${errorText}`
+      }, { status: dispatchResponse.status });
+    }
+
+    // Wait a moment for the workflow run to be created, then fetch the run ID
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Fetch the most recent run for this workflow and branch
+    const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?branch=${branch}&per_page=1`;
+    const runsResponse = await fetch(runsUrl, {
+      headers: {
+        'Authorization': `Bearer ${githubToken}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    if (!runsResponse.ok) {
+      return NextResponse.json({
+        success: false,
+        error: 'workflow_run_fetch_failed',
+        message: 'Failed to fetch workflow run ID'
+      }, { status: runsResponse.status });
+    }
+
+    const runsData = await runsResponse.json();
+    const runId = runsData.workflow_runs?.[0]?.id;
+
+    if (!runId) {
+      return NextResponse.json({
+        success: false,
+        error: 'workflow_run_not_found',
+        message: 'Workflow was triggered but run ID could not be determined'
       });
     }
 
-    const computedMeasurementHash = stdout.trim();
-    const verified = computedMeasurementHash === measurementHashInput;
+    // Poll the workflow until it completes
+    const maxAttempts = 10;
+    let attempts = 0;
+    let status = 'queued';
+    let conclusion: string | null = null;
+
+    while (attempts < maxAttempts && status !== 'completed') {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between checks
+      
+      const runUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}`;
+      const runResponse = await fetch(runUrl, {
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (runResponse.ok) {
+        const runData = await runResponse.json();
+        status = runData.status;
+        conclusion = runData.conclusion;
+        
+        if (status === 'completed') {
+          break;
+        }
+      }
+      
+      attempts++;
+    }
+
+    // Determine verification result
+    let verified = false;
+    if (status === 'completed' && conclusion === 'success') {
+      verified = true;
+    }
 
     return NextResponse.json({
       success: true,
