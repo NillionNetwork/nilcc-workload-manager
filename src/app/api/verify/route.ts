@@ -103,20 +103,61 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Return the workflow run ID for polling
+    // Poll the workflow until it completes
+    const maxAttempts = 10;
+    let attempts = 0;
+    let status = 'queued';
+    let conclusion: string | null = null;
+
+    while (attempts < maxAttempts && status !== 'completed') {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between checks
+      
+      const runUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}`;
+      const runResponse = await fetch(runUrl, {
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (runResponse.ok) {
+        const runData = await runResponse.json();
+        status = runData.status;
+        conclusion = runData.conclusion;
+        
+        if (status === 'completed') {
+          break;
+        }
+      }
+      
+      attempts++;
+    }
+
+    // Determine verification result
+    let verified = false;
+    if (status === 'completed' && conclusion === 'success') {
+      verified = true;
+    }
+
+    // Return in the original format
     return NextResponse.json({
       success: true,
-      workflow_run_id: runId,
-      status: 'queued',
-      message: 'Verification workflow triggered. Please poll for results.',
+      quote: {
+        verified,
+        header: {
+          tee_type: 'TEE_AMD_SEV_SNP'
+        }
+      },
+      proof_of_cloud: verified
     });
   } catch (error) {
     console.error('Error triggering workflow:', error);
     return NextResponse.json({
       success: false,
       error: 'verification_failed',
-      message: error instanceof Error ? error.message : 'Measurement hash verification failed'
-    }, { status: 500 });
+      message: 'Measurement hash verification failed'
+    });
   }
 }
 
