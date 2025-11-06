@@ -8,6 +8,7 @@ import { ArtifactVersionSelect } from '@/components/verify/ArtifactVersionSelect
 import { ResourceTierSelect } from '@/components/verify/ResourceTierSelect';
 import { PreComputerToggle } from '@/components/verify/PreComputerToggle';
 import { WorkloadSelect } from '@/components/verify/WorkloadSelect';
+import { AttestationBadgePreview } from '@/components/verify/AttestationBadgePreview';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Artifact, WorkloadTier, WorkloadResponse } from '@/lib/nilcc-types';
 import { dockerComposesha256Hex } from '@/lib/hash';
@@ -41,6 +42,7 @@ export default function VerifyPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [verified, setVerified] = useState<boolean | null>(null);
   const [precomputeMode, setPrecomputeMode] = useState(false)
+  const [reportUrlInput, setReportUrlInput] = useState('');
 
   // Fetch workloads
   useEffect(() => {
@@ -50,9 +52,12 @@ export default function VerifyPage() {
         .listWorkloads()
         .then((fetchedWorkloads) => {
           setWorkloads(fetchedWorkloads);
-          console.log('fetchWorkloads', fetchedWorkloads)
           if (fetchedWorkloads.length > 0) {
             setSelectedWorkloadId(fetchedWorkloads[0].workloadId);
+            // Auto-populate report URL for first workload
+            if (fetchedWorkloads[0].domain) {
+              setReportUrlInput(`https://${fetchedWorkloads[0].domain}/nilcc/api/v2/report`);
+            }
           }
         })
         .catch(() => { })
@@ -62,7 +67,7 @@ export default function VerifyPage() {
     }
   }, [client, apiKey]);
 
-  // Recalculate docker compose hash when selected workload changes
+  // Recalculate docker compose hash and report URL when selected workload changes
   useEffect(() => {
     const selected = workloads.find((w) => w.workloadId === selectedWorkloadId);
     if (selected?.dockerCompose) {
@@ -71,6 +76,11 @@ export default function VerifyPage() {
         .catch(() => { });
     } else {
       setDockerComposeHash('');
+    }
+
+    // Auto-populate report URL when workload changes
+    if (selected?.domain) {
+      setReportUrlInput(`https://${selected.domain}/nilcc/api/v2/report`);
     }
   }, [selectedWorkloadId, workloads]);
 
@@ -242,9 +252,40 @@ export default function VerifyPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={"Verification Result"}
+        size={verified ? 'xl' : 'md'}
       >
         {verified === true && (
-          <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+          <div className="space-y-3">
+            <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+            <div>
+              <label className="text-xs text-muted-foreground mt-2">Report URL</label>
+              <Input
+                type="text"
+                value={reportUrlInput}
+                onChange={(e) => setReportUrlInput(e.target.value)}
+                placeholder="https://<your-domain>/nilcc/api/v2/report"
+                className="h-7 text-xs mt-0.5"
+              />
+            </div>
+            <label className="text-xs text-muted-foreground mt-2">Attestation Badge</label>
+            <AttestationBadgePreview />
+            <div>
+              <span className='text-xs'>
+                You can use this component in your application. See the&nbsp;
+                <a
+                  href="https://docs.nillion.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#2563eb', textDecoration: 'underline' }}
+                >
+                  Nillion documentation
+                </a>
+                &nbsp;for more details.
+              </span>
+            </div>
+
+
+          </div>
         )}
         {verified === false && (
           <p className="text-sm text-destructive">Could not verify measurement hash.</p>
@@ -253,5 +294,4 @@ export default function VerifyPage() {
     </div>
   );
 }
-
 

@@ -8,7 +8,7 @@ type PreComputerToggleProps = {
 export function PreComputerToggle({ value, onChange }: PreComputerToggleProps) {
   return (
     <div className="flex items-center space-x-3 mb-3">
-      <span className="text-xs text-muted-foreground">Precompute</span>
+      <span className="text-xs text-muted-foreground">Precomputed</span>
       <button
         type="button"
         role="switch"
@@ -48,7 +48,7 @@ export function PreComputerToggle({ value, onChange }: PreComputerToggleProps) {
         />
         <span className="sr-only">{value ? "Precompute mode" : "Local mode"}</span>
       </button>
-      <span className="text-xs text-muted-foreground">Local</span>
+      <span className="text-xs text-muted-foreground">Local Generated</span>
     </div>
   );
 }
