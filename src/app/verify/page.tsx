@@ -1,21 +1,33 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, Input, Button, Modal, Alert } from '@/components/ui';
+import { Card, CardContent, Input, Button, Modal } from '@/components/ui';
+import { ManualResourceTierInput } from '@/components/verify/ManualResourceTierInput';
+import { ManualArtifactVersionInput } from '@/components/verify/ManualArtifactVersionInput';
+import { ArtifactVersionSelect } from '@/components/verify/ArtifactVersionSelect';
+import { ResourceTierSelect } from '@/components/verify/ResourceTierSelect';
+import { PreComputerToggle } from '@/components/verify/PreComputerToggle';
+import { WorkloadSelect } from '@/components/verify/WorkloadSelect';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Artifact, WorkloadTier } from '@/lib/nilcc-types';
+import { Artifact, WorkloadTier, WorkloadResponse } from '@/lib/nilcc-types';
+import { dockerComposesha256Hex } from '@/lib/hash';
+import { preComputeMHash } from '@/lib/precompute-mhash';
 
 export default function VerifyPage() {
   const { client, apiKey } = useSettings();
 
-  const [measurementHash, setMeasurementHash] = useState('7ed75de7865771c8e4faa378fa738e3effe5a83d68dfb90335211c45311e5cedde0373a58c2bdeb38a46b96af3782f0d');
-  const [dockerComposeHash, setDockerComposeHash] = useState('3ca4dafba09c64e1811a116354db9ba61582268e381d3f452a2dafbd80eca041');
+  const [measurementHash, setMeasurementHash] = useState('');
+  const [dockerComposeHash, setDockerComposeHash] = useState('');
+
+  // Workloads
+  const [workloads, setWorkloads] = useState<WorkloadResponse[]>([]);
+  const [selectedWorkloadId, setSelectedWorkloadId] = useState<string>('');
+  const [loadingWorkloads, setLoadingWorkloads] = useState(true);
 
   // Tiers and artifacts (mirror workloads/create when apiKey present)
   const [tiers, setTiers] = useState<WorkloadTier[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
   const [loadingTiers, setLoadingTiers] = useState(true);
-
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [selectedArtifactVersion, setSelectedArtifactVersion] = useState<string>('');
   const [loadingArtifacts, setLoadingArtifacts] = useState(true);
@@ -28,6 +40,49 @@ export default function VerifyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [verified, setVerified] = useState<boolean | null>(null);
+  const [precomputeMode, setPrecomputeMode] = useState(false)
+
+  // Fetch workloads
+  useEffect(() => {
+    if (client && apiKey) {
+      setLoadingWorkloads(true);
+      client
+        .listWorkloads()
+        .then((fetchedWorkloads) => {
+          setWorkloads(fetchedWorkloads);
+          console.log('fetchWorkloads', fetchedWorkloads)
+          if (fetchedWorkloads.length > 0) {
+            setSelectedWorkloadId(fetchedWorkloads[0].workloadId);
+          }
+        })
+        .catch(() => { })
+        .finally(() => setLoadingWorkloads(false));
+    } else {
+      setLoadingWorkloads(false);
+    }
+  }, [client, apiKey]);
+
+  // Recalculate docker compose hash when selected workload changes
+  useEffect(() => {
+    const selected = workloads.find((w) => w.workloadId === selectedWorkloadId);
+    if (selected?.dockerCompose) {
+      dockerComposesha256Hex(selected.dockerCompose)
+        .then(setDockerComposeHash)
+        .catch(() => { });
+    } else {
+      setDockerComposeHash('');
+    }
+  }, [selectedWorkloadId, workloads]);
+
+  // Precompute measurement hash from workload when precompute mode is enabled
+  useEffect(() => {
+    if (!precomputeMode || !selectedWorkloadId) return;
+    let cancelled = false;
+    preComputeMHash(selectedWorkloadId)
+      .then((mh) => { if (!cancelled) setMeasurementHash(mh); })
+      .catch(() => { /* ignore errors; user can input manually */ });
+    return () => { cancelled = true; };
+  }, [precomputeMode, selectedWorkloadId]);
 
   // Fetch tiers
   useEffect(() => {
@@ -105,6 +160,19 @@ export default function VerifyPage() {
       <form onSubmit={onVerify} className="space-y-2">
         <Card>
           <CardContent>
+
+            <WorkloadSelect
+              loading={loadingWorkloads}
+              workloads={workloads}
+              value={selectedWorkloadId}
+              onChange={setSelectedWorkloadId}
+            />
+
+            <p className='mb-2'>In order to verify your measurement hash, you have two options. </p>
+
+            {/* Precompute/Local toggle switch */}
+            <PreComputerToggle value={precomputeMode} onChange={setPrecomputeMode} />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Measurement Hash</label>
@@ -112,7 +180,6 @@ export default function VerifyPage() {
                   type="text"
                   value={measurementHash}
                   onChange={(e) => setMeasurementHash(e.target.value)}
-                  placeholder="7ed75de7865771c8e4faa378fa738e3effe5a83d68dfb90335211c45311e5cedde0373a58c2bdeb38a46b96af3782f0d"
                   required
                   className="h-7 text-xs mt-0.5"
                 />
@@ -124,7 +191,6 @@ export default function VerifyPage() {
                   type="text"
                   value={dockerComposeHash}
                   onChange={(e) => setDockerComposeHash(e.target.value)}
-                  placeholder="3ca4dafba09c64e1811a116354db9ba61582268e381d3f452a2dafbd80eca041"
                   required
                   className="h-7 text-xs mt-0.5"
                 />
@@ -135,91 +201,25 @@ export default function VerifyPage() {
             {apiKey ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr] gap-4 mt-4">
                 {/* Resource Tier */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Resource Tier</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select tier to set CPU, Memory, Disk & Cost</label>
-                  {loadingTiers && (
-                    <p className="text-muted-foreground text-xs mt-0.5">Loading tiers...</p>
-                  )}
-                  {!loadingTiers && tiers.length > 0 && (
-                    <select
-                      value={selectedTierId}
-                      onChange={(e) => setSelectedTierId(e.target.value)}
-                      className="w-full p-2 text-xs border border-border rounded-md bg-background"
-                      required
-                    >
-                      {tiers.map((tier) => (
-                        <option key={tier.tierId} value={tier.tierId}>
-                          {tier.name} - {tier.cpus} CPU • {tier.memoryMb}MB RAM • {tier.diskGb}GB Disk • {tier.cost} credit/min
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {!loadingTiers && tiers.length === 0 && (
-                    <Alert variant="warning" className="px-2 mt-0.5">
-                      <p className="text-xs">No tiers available</p>
-                    </Alert>
-                  )}
-                </div>
+                <ResourceTierSelect
+                  loading={loadingTiers}
+                  tiers={tiers}
+                  value={selectedTierId}
+                  onChange={setSelectedTierId}
+                />
 
                 {/* Artifact Version */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Artifact Version</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select the VM image version</label>
-                  {loadingArtifacts && (
-                    <p className="text-muted-foreground text-xs mt-0.5">Loading artifact versions...</p>
-                  )}
-                  {!loadingArtifacts && artifacts.length > 0 && (
-                    <select
-                      value={selectedArtifactVersion}
-                      onChange={(e) => setSelectedArtifactVersion(e.target.value)}
-                      className="w-full p-2 text-xs border border-border rounded-md bg-background"
-                    >
-                      {artifacts.map((artifact) => (
-                        <option key={artifact.version} value={artifact.version}>
-                          {artifact.version} (Built: {new Date(artifact.builtAt).toLocaleDateString()})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {!loadingArtifacts && artifacts.length === 0 && (
-                    <Alert variant="warning" className="px-2 mt-0.5">
-                      <p className="text-xs">No artifact versions available. Using default.</p>
-                    </Alert>
-                  )}
-                </div>
+                <ArtifactVersionSelect
+                  loading={loadingArtifacts}
+                  artifacts={artifacts}
+                  value={selectedArtifactVersion}
+                  onChange={setSelectedArtifactVersion}
+                />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr] gap-4 mt-4">
-                {/* Resource Tier (manual input for VCPUs) */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Resource Tier</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select tier to set CPU, Memory, Disk & Cost</label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={vcpusInput}
-                    onChange={(e) => setVcpusInput(e.target.value)}
-                    placeholder="2"
-                    min="1"
-                    required
-                    className="h-7 text-xs mt-0.5"
-                  />
-                </div>
-
-                {/* Artifact Version (manual input for version) */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Artifact Version</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select the VM image version</label>
-                  <Input
-                    type="text"
-                    value={nilccVersionInput}
-                    onChange={(e) => setNilccVersionInput(e.target.value)}
-                    placeholder="0.2.1"
-                    required
-                    className="h-7 text-xs mt-0.5"
-                  />
-                </div>
+                  <ManualResourceTierInput value={vcpusInput} onValueChange={setVcpusInput} />
+                  <ManualArtifactVersionInput value={nilccVersionInput} onValueChange={setNilccVersionInput} />
               </div>
             )}
           </CardContent>
