@@ -12,7 +12,6 @@ import { AttestationBadgePreview } from '@/components/verify/AttestationBadgePre
 import { useSettings } from '@/contexts/SettingsContext';
 import { Artifact, WorkloadTier, WorkloadResponse } from '@/lib/nilcc-types';
 import { dockerComposesha256Hex } from '@/lib/hash';
-import { preComputeMHash } from '@/lib/precompute-mhash';
 
 export default function VerifyPage() {
   const { client, apiKey } = useSettings();
@@ -88,11 +87,24 @@ export default function VerifyPage() {
   useEffect(() => {
     if (!precomputeMode || !selectedWorkloadId) return;
     let cancelled = false;
-    preComputeMHash(selectedWorkloadId)
-      .then((mh) => { if (!cancelled) setMeasurementHash(mh); })
+
+    const selectedWorkload = workloads.find(w => w.workloadId === selectedWorkloadId);
+    if (!selectedWorkload?.domain) return;
+
+    const reportUrl = `https://${selectedWorkload.domain}/nilcc/api/v2/report`;
+
+    fetch(reportUrl)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled) {
+          const measurement = data?.report?.measurement;
+          if (measurement) setMeasurementHash(measurement);
+        }
+      })
       .catch(() => { /* ignore errors; user can input manually */ });
+
     return () => { cancelled = true; };
-  }, [precomputeMode, selectedWorkloadId]);
+  }, [precomputeMode, selectedWorkloadId, workloads]);
 
   // Fetch tiers
   useEffect(() => {
