@@ -1,0 +1,77 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button, Input } from '@/components/ui';
+
+interface EmbedCodeProps {
+  reportUrl: string;
+}
+
+export function EmbedCode({ reportUrl }: EmbedCodeProps) {
+  const [copied, setCopied] = useState(false);
+  const [deploymentUrl, setDeploymentUrl] = useState('');
+
+  useEffect(() => {
+    // Set default deployment URL, but don't use localhost
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      // If localhost, leave empty so user must enter their production URL
+      if (!origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+        setDeploymentUrl(origin);
+      }
+    }
+  }, []);
+
+  const embedCode = deploymentUrl
+    ? `<iframe src="${deploymentUrl}/api/badge?reportUrl=${encodeURIComponent(reportUrl)}" width="260" height="90" frameborder="0" scrolling="no" style="border: none; overflow: hidden;"></iframe>`
+    : '';
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Deployment URL</label>
+        <Input
+          type="text"
+          value={deploymentUrl}
+          onChange={(e) => setDeploymentUrl(e.target.value)}
+          placeholder="https://your-app.com"
+          className="h-7 text-xs"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Enter your production deployment URL (not localhost)</p>
+      </div>
+
+      <div className="relative">
+        <textarea
+          readOnly
+          value={embedCode || 'Enter deployment URL above to generate embed code'}
+          className="w-full h-20 p-2 text-xs font-mono bg-muted rounded border border-border resize-none"
+          onClick={(e) => e.currentTarget.select()}
+        />
+        <Button
+          onClick={handleCopy}
+          className="absolute top-2 right-2 h-7 text-xs"
+          variant="secondary"
+          disabled={!embedCode}
+        >
+          {copied ? 'Copied!' : 'Copy'}
+        </Button>
+      </div>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>• Badge verifies attestation automatically from your workload</p>
+        <p>• Updates in real-time when report changes</p>
+        <p>• Paste this code into your website or README</p>
+      </div>
+    </div>
+  );
+}

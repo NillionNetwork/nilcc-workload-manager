@@ -9,6 +9,7 @@ import { ResourceTierSelect } from '@/components/verify/ResourceTierSelect';
 import { PreComputerToggle } from '@/components/verify/PreComputerToggle';
 import { WorkloadSelect } from '@/components/verify/WorkloadSelect';
 import { AttestationBadgePreview } from '@/components/verify/AttestationBadgePreview';
+import { EmbedCode } from '@/components/verify/EmbedCode';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Artifact, WorkloadTier, WorkloadResponse } from '@/lib/nilcc-types';
 import { dockerComposesha256Hex } from '@/lib/hash';
@@ -267,23 +268,35 @@ export default function VerifyPage() {
         size={verified ? 'xl' : 'md'}
       >
         {verified === true && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+
             <div>
-              <label className="text-xs text-muted-foreground mt-2">Report URL</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Report URL</label>
               <Input
                 type="text"
                 value={reportUrlInput}
                 onChange={(e) => setReportUrlInput(e.target.value)}
                 placeholder="https://<your-domain>/nilcc/api/v2/report"
-                className="h-7 text-xs mt-0.5"
+                className="h-7 text-xs"
               />
             </div>
-            <label className="text-xs text-muted-foreground mt-2">Attestation Badge</label>
-            <AttestationBadgePreview />
+
             <div>
-              <span className='text-xs'>
-                You can use this component in your application. See the&nbsp;
+              <label className="text-sm font-semibold mb-2 block">Preview:</label>
+              <div className="bg-muted/30 p-4 rounded-lg flex justify-center">
+                <AttestationBadgePreview reportUrl={reportUrlInput} />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold mb-2 block">Embed code:</label>
+              <EmbedCode reportUrl={reportUrlInput} />
+            </div>
+
+            <div className="text-xs text-muted-foreground pt-2">
+              <span>
+                See the&nbsp;
                 <a
                   href="https://docs.nillion.com/"
                   target="_blank"
@@ -295,8 +308,6 @@ export default function VerifyPage() {
                 &nbsp;for more details.
               </span>
             </div>
-
-
           </div>
         )}
         {verified === false && (
