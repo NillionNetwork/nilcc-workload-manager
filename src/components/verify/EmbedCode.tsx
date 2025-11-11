@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { Button, Input } from '@/components/ui';
 
 interface EmbedCodeProps {
-  reportUrl: string;
+  verificationUrl: string;
+  reportUrl?: string;
 }
 
-export function EmbedCode({ reportUrl }: EmbedCodeProps) {
+export function EmbedCode({ verificationUrl, reportUrl }: EmbedCodeProps) {
   const [copied, setCopied] = useState(false);
   const [deploymentUrl, setDeploymentUrl] = useState('');
   const [codeType, setCodeType] = useState<'html' | 'jsx'>('html');
@@ -23,15 +24,21 @@ export function EmbedCode({ reportUrl }: EmbedCodeProps) {
     }
   }, []);
 
+  const badgeParams = `verificationUrl=${encodeURIComponent(verificationUrl)}${
+    reportUrl ? `&reportUrl=${encodeURIComponent(reportUrl)}` : ''
+  }`;
+
   const htmlCode = deploymentUrl
-    ? `<iframe src="${deploymentUrl}/api/badge?reportUrl=${encodeURIComponent(reportUrl)}" width="260" height="90" scrolling="no" style="border: none;"></iframe>`
+    ? `<iframe src="${deploymentUrl}/api/badge?${badgeParams}" width="260" height="90" scrolling="no" style="border: none;"></iframe>`
     : '';
 
   const jsxCode = deploymentUrl
     ? `<iframe
-  src="${deploymentUrl}/api/badge?reportUrl=${encodeURIComponent(reportUrl)}"
+  src="${deploymentUrl}/api/badge?${badgeParams}"
   width={260}
   height={90}
+  scrolling="no"
+  style={{ border: 'none' }}
 />`
     : '';
 
@@ -100,8 +107,8 @@ export function EmbedCode({ reportUrl }: EmbedCodeProps) {
       </div>
 
       <div className="text-xs text-muted-foreground space-y-1">
-        <p>• Badge verifies attestation automatically from your workload</p>
-        <p>• Updates in real-time when report changes</p>
+        <p>• Badge displays verified measurement from GitHub attestation</p>
+        <p>• {reportUrl ? 'Optionally checks live workload matches verification' : 'Add Report URL to check live workload status'}</p>
         <p>• {codeType === 'html' ? 'Paste into HTML files or README' : 'Paste into React components'}</p>
       </div>
     </div>

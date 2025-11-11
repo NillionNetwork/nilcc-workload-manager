@@ -43,6 +43,7 @@ export default function VerifyPage() {
   const [verified, setVerified] = useState<boolean | null>(null);
   const [precomputeMode, setPrecomputeMode] = useState(false)
   const [reportUrlInput, setReportUrlInput] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
 
   // Fetch workloads
   useEffect(() => {
@@ -147,10 +148,11 @@ export default function VerifyPage() {
     e.preventDefault();
     setSubmitting(true);
     setVerified(null);
+    setVerificationUrl('');
     try {
       const effectiveNilccVersion = apiKey ? selectedArtifactVersion : nilccVersionInput;
       const effectiveVcpus = apiKey ? (selectedTier?.cpus ?? 0) : parseInt(vcpusInput || '0', 10);
-      const res = await fetch('/verify', {
+      const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,6 +167,9 @@ export default function VerifyPage() {
         setVerified(false);
       } else {
         setVerified(Boolean(data?.proof_of_cloud));
+        if (data?.verificationUrl) {
+          setVerificationUrl(data.verificationUrl);
+        }
       }
     } catch {
       setVerified(false);
@@ -269,10 +274,30 @@ export default function VerifyPage() {
       >
         {verified === true && (
           <div className="space-y-4">
-            <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+            <p style={{ color: '#16a34a' }} className="text-sm">
+              Measurement hash verified successfully.
+            </p>
 
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Report URL</label>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Verification URL (Your GitHub Attestation JSON)
+              </label>
+              <Input
+                type="text"
+                value={verificationUrl}
+                onChange={(e) => setVerificationUrl(e.target.value)}
+                className="h-7 text-xs font-mono"
+                placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter the GitHub URL to your attestation JSON file. Badge will validate against this.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Report URL (Optional - Live Workload Check)
+              </label>
               <Input
                 type="text"
                 value={reportUrlInput}
@@ -280,19 +305,32 @@ export default function VerifyPage() {
                 placeholder="https://<your-domain>/nilcc/api/v2/report"
                 className="h-7 text-xs"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Add to compare live workload measurement with verified hash
+              </p>
             </div>
 
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Preview:</label>
-              <div className="bg-muted/30 p-4 rounded-lg flex justify-center">
-                <AttestationBadgePreview reportUrl={reportUrlInput} />
-              </div>
-            </div>
+            {verificationUrl && (
+              <>
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Preview:</label>
+                  <div className="bg-muted/30 p-4 rounded-lg flex justify-center">
+                    <AttestationBadgePreview
+                      verificationUrl={verificationUrl}
+                      reportUrl={reportUrlInput || undefined}
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Embed code:</label>
-              <EmbedCode reportUrl={reportUrlInput} />
-            </div>
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Embed code:</label>
+                  <EmbedCode
+                    verificationUrl={verificationUrl}
+                    reportUrl={reportUrlInput || undefined}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="text-xs text-muted-foreground pt-2">
               <span>
