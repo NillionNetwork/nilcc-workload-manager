@@ -10,6 +10,7 @@ interface EmbedCodeProps {
 export function EmbedCode({ reportUrl }: EmbedCodeProps) {
   const [copied, setCopied] = useState(false);
   const [deploymentUrl, setDeploymentUrl] = useState('');
+  const [codeType, setCodeType] = useState<'html' | 'jsx'>('html');
 
   useEffect(() => {
     // Set default deployment URL, but don't use localhost
@@ -22,9 +23,19 @@ export function EmbedCode({ reportUrl }: EmbedCodeProps) {
     }
   }, []);
 
-  const embedCode = deploymentUrl
-    ? `<iframe src="${deploymentUrl}/api/badge?reportUrl=${encodeURIComponent(reportUrl)}" width="260" height="90" frameborder="0" scrolling="no" style="border: none; overflow: hidden;"></iframe>`
+  const htmlCode = deploymentUrl
+    ? `<iframe src="${deploymentUrl}/api/badge?reportUrl=${encodeURIComponent(reportUrl)}" width="260" height="90" scrolling="no" style="border: none;"></iframe>`
     : '';
+
+  const jsxCode = deploymentUrl
+    ? `<iframe
+  src="${deploymentUrl}/api/badge?reportUrl=${encodeURIComponent(reportUrl)}"
+  width={260}
+  height={90}
+/>`
+    : '';
+
+  const embedCode = codeType === 'html' ? htmlCode : jsxCode;
 
   const handleCopy = async () => {
     try {
@@ -50,11 +61,32 @@ export function EmbedCode({ reportUrl }: EmbedCodeProps) {
         <p className="text-xs text-muted-foreground mt-1">Enter your production deployment URL (not localhost)</p>
       </div>
 
+      <div className="flex gap-2">
+        <button
+          onClick={() => setCodeType('html')}
+          className={`px-3 py-1 text-xs rounded ${codeType === 'html'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+        >
+          HTML
+        </button>
+        <button
+          onClick={() => setCodeType('jsx')}
+          className={`px-3 py-1 text-xs rounded ${codeType === 'jsx'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+        >
+          React/JSX
+        </button>
+      </div>
+
       <div className="relative">
         <textarea
           readOnly
           value={embedCode || 'Enter deployment URL above to generate embed code'}
-          className="w-full h-20 p-2 text-xs font-mono bg-muted rounded border border-border resize-none"
+          className="w-full h-24 p-2 text-xs font-mono bg-muted rounded border border-border resize-none"
           onClick={(e) => e.currentTarget.select()}
         />
         <Button
@@ -70,7 +102,7 @@ export function EmbedCode({ reportUrl }: EmbedCodeProps) {
       <div className="text-xs text-muted-foreground space-y-1">
         <p>• Badge verifies attestation automatically from your workload</p>
         <p>• Updates in real-time when report changes</p>
-        <p>• Paste this code into your website or README</p>
+        <p>• {codeType === 'html' ? 'Paste into HTML files or README' : 'Paste into React components'}</p>
       </div>
     </div>
   );
