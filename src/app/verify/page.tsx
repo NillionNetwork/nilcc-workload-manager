@@ -277,7 +277,21 @@ export default function VerifyPage() {
             <p style={{ color: '#16a34a' }} className="text-sm">
               Measurement hash verified successfully.
             </p>
-
+            <h4> Embed badge (Optional)</h4>
+            <div className="text-xs text-muted-foreground">
+              <span>
+                See the verify &nbsp;
+                <a
+                  href="https://docs.nillion.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#2563eb', textDecoration: 'underline' }}
+                >
+                  documentation
+                </a>
+                &nbsp;for more details.
+              </span>
+            </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
                 Verification URL (Your GitHub Attestation JSON)
@@ -294,22 +308,6 @@ export default function VerifyPage() {
               </p>
             </div>
 
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">
-                Report URL (Optional - Live Workload Check)
-              </label>
-              <Input
-                type="text"
-                value={reportUrlInput}
-                onChange={(e) => setReportUrlInput(e.target.value)}
-                placeholder="https://<your-domain>/nilcc/api/v2/report"
-                className="h-7 text-xs"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Add to compare live workload measurement with verified hash
-              </p>
-            </div>
-
             {verificationUrl && (
               <>
                 <div>
@@ -322,30 +320,14 @@ export default function VerifyPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-semibold mb-2 block">Embed code:</label>
-                  <EmbedCode
-                    verificationUrl={verificationUrl}
-                    reportUrl={reportUrlInput || undefined}
-                  />
-                </div>
+                <EmbedCode
+                  verificationUrl={verificationUrl}
+                  reportUrl={reportUrlInput || undefined}
+                />
               </>
             )}
 
-            <div className="text-xs text-muted-foreground pt-2">
-              <span>
-                See the&nbsp;
-                <a
-                  href="https://docs.nillion.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#2563eb', textDecoration: 'underline' }}
-                >
-                  Nillion documentation
-                </a>
-                &nbsp;for more details.
-              </span>
-            </div>
+
           </div>
         )}
         {verified === false && (
