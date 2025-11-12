@@ -4,37 +4,65 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
+  const verificationUrl = searchParams.get('verificationUrl');
   const reportUrl = searchParams.get('reportUrl');
 
-  if (!reportUrl) {
-    return new NextResponse(errorBadge('Report URL required'), {
+  if (!verificationUrl) {
+    return new NextResponse(errorBadge('Verification URL required'), {
       headers: { 'Content-Type': 'text/html' }
     });
   }
 
   try {
-    // Fetch the report
-    const response = await fetch(reportUrl);
-    if (!response.ok) {
-      return new NextResponse(errorBadge('Failed to fetch report'), {
+    // Convert GitHub blob URL to raw URL if needed
+    const rawUrl = convertToRawGitHubUrl(verificationUrl);
+
+    // Fetch the verification JSON
+    const verificationResponse = await fetch(rawUrl);
+    if (!verificationResponse.ok) {
+      return new NextResponse(errorBadge('Failed to fetch verification'), {
         headers: { 'Content-Type': 'text/html' }
       });
     }
 
-    const data = await response.json();
-    const measurement = data?.report?.measurement;
+    const verificationData = await verificationResponse.json();
+
+    // Parse measurement hash from JSON structure like {"0.1.0": "hash..."}
+    const measurementHash = extractMeasurementHash(verificationData);
+
+    if (!measurementHash) {
+      return new NextResponse(errorBadge('Invalid verification format'), {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+
     const teeType = 'AMD SEV-SNP';
+    let liveStatus: 'matches' | 'changed' | 'unavailable' | null = null;
 
-    if (!measurement) {
-      return new NextResponse(errorBadge('No measurement found'), {
-        headers: { 'Content-Type': 'text/html' }
-      });
+    // Optional: Check live report if reportUrl provided
+    if (reportUrl) {
+      try {
+        const reportResponse = await fetch(reportUrl);
+        if (reportResponse.ok) {
+          const reportData = await reportResponse.json();
+          const liveMeasurement = reportData?.report?.measurement;
+          if (liveMeasurement) {
+            liveStatus = liveMeasurement === measurementHash ? 'matches' : 'changed';
+          } else {
+            liveStatus = 'unavailable';
+          }
+        } else {
+          liveStatus = 'unavailable';
+        }
+      } catch {
+        liveStatus = 'unavailable';
+      }
     }
 
-    return new NextResponse(successBadge(measurement, teeType), {
-      headers: { 
+    return new NextResponse(successBadge(measurementHash, teeType, liveStatus), {
+      headers: {
         'Content-Type': 'text/html',
-        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=3600' // Cache for 1 hour since verification is immutable
       }
     });
   } catch {
@@ -44,9 +72,50 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function successBadge(measurement: string, teeType: string): string {
+function convertToRawGitHubUrl(url: string): string {
+  // Convert GitHub blob URLs to raw.githubusercontent.com
+  // From: https://github.com/user/repo/blob/branch/path/file.json
+  // To: https://raw.githubusercontent.com/user/repo/branch/path/file.json
+  if (url.includes('github.com') && url.includes('/blob/')) {
+    return url
+      .replace('github.com', 'raw.githubusercontent.com')
+      .replace('/blob/', '/');
+  }
+  return url;
+}
+
+function extractMeasurementHash(data: unknown): string | null {
+  // Handle different JSON structures
+  if (typeof data === 'object' && data !== null) {
+    // Structure: {"0.1.0": "measurement_hash"}
+    const entries = Object.entries(data);
+    if (entries.length > 0) {
+      const [, value] = entries[0];
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
+    }
+
+    // Alternative structure: {measurementHash: "..."}
+    if ('measurementHash' in data && typeof (data as { measurementHash?: unknown }).measurementHash === 'string') {
+      return (data as { measurementHash: string }).measurementHash;
+    }
+  }
+  return null;
+}
+
+function successBadge(measurement: string, teeType: string, liveStatus: 'matches' | 'changed' | 'unavailable' | null): string {
   const shortMeasurement = `${measurement.substring(0, 12)}...${measurement.substring(measurement.length - 8)}`;
-  
+
+  let statusHtml = '';
+  if (liveStatus === 'matches') {
+    statusHtml = '<div class="live-status matches">🟢 Live workload matches</div>';
+  } else if (liveStatus === 'changed') {
+    statusHtml = '<div class="live-status changed">⚠️ Measurement changed</div>';
+  } else if (liveStatus === 'unavailable') {
+    statusHtml = '<div class="live-status unavailable">⚠️ Live check unavailable</div>';
+  }
+
   return `
 <!DOCTYPE html>
 <html>
@@ -54,7 +123,7 @@ function successBadge(measurement: string, teeType: string): string {
   <meta charset="utf-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       display: flex;
       align-items: center;
@@ -104,16 +173,31 @@ function successBadge(measurement: string, teeType: string): string {
       font-family: 'Courier New', monospace;
       margin-top: 2px;
     }
+    .live-status {
+      font-size: 9px;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    .live-status.matches {
+      color: #16a34a;
+    }
+    .live-status.changed {
+      color: #f59e0b;
+    }
+    .live-status.unavailable {
+      color: #9ca3af;
+    }
   </style>
 </head>
 <body>
   <div class="badge">
     <div class="icon">✓</div>
     <div class="content">
-      <div class="label">Attestation</div>
+      <div class="label">Developer Attestation</div>
       <div class="title">Verified by nilCC</div>
       <div class="measurement">${teeType}</div>
       <div class="measurement">${shortMeasurement}</div>
+      ${statusHtml}
     </div>
   </div>
 </body>
