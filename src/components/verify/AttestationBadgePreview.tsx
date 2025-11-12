@@ -19,7 +19,6 @@ export function AttestationBadgePreview({ verificationUrl, reportUrl }: Attestat
         src={badgeUrl}
         width={260}
         height={90}
-        scrolling="no"
         style={{ border: 'none' }}
       />
     </div>
