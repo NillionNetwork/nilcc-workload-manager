@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   if (!verificationUrl) {
     return new NextResponse(errorBadge('Verification URL required'), {
-      headers: { 'Content-Type': 'text/html' }
+      headers: { 'Content-Type': 'text/html' },
     });
   }
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const verificationResponse = await fetch(rawUrl);
     if (!verificationResponse.ok) {
       return new NextResponse(errorBadge('Failed to fetch verification'), {
-        headers: { 'Content-Type': 'text/html' }
+        headers: { 'Content-Type': 'text/html' },
       });
     }
 
@@ -32,11 +32,10 @@ export async function GET(request: NextRequest) {
 
     if (!measurementHash) {
       return new NextResponse(errorBadge('Invalid verification format'), {
-        headers: { 'Content-Type': 'text/html' }
+        headers: { 'Content-Type': 'text/html' },
       });
     }
 
-    const teeType = 'AMD SEV-SNP';
     let liveStatus: 'matches' | 'changed' | 'unavailable' | null = null;
 
     // Optional: Check live report if reportUrl provided
@@ -47,7 +46,8 @@ export async function GET(request: NextRequest) {
           const reportData = await reportResponse.json();
           const liveMeasurement = reportData?.report?.measurement;
           if (liveMeasurement) {
-            liveStatus = liveMeasurement === measurementHash ? 'matches' : 'changed';
+            liveStatus =
+              liveMeasurement === measurementHash ? 'matches' : 'changed';
           } else {
             liveStatus = 'unavailable';
           }
@@ -59,15 +59,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return new NextResponse(successBadge(measurementHash, teeType, liveStatus), {
+    return new NextResponse(successBadge(measurementHash, liveStatus), {
       headers: {
         'Content-Type': 'text/html',
-        'Cache-Control': 'public, max-age=3600' // Cache for 1 hour since verification is immutable
-      }
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour since verification is immutable
+      },
     });
   } catch {
     return new NextResponse(errorBadge('Verification failed'), {
-      headers: { 'Content-Type': 'text/html' }
+      headers: { 'Content-Type': 'text/html' },
     });
   }
 }
@@ -97,23 +97,36 @@ function extractMeasurementHash(data: unknown): string | null {
     }
 
     // Alternative structure: {measurementHash: "..."}
-    if ('measurementHash' in data && typeof (data as { measurementHash?: unknown }).measurementHash === 'string') {
+    if (
+      'measurementHash' in data &&
+      typeof (data as { measurementHash?: unknown }).measurementHash ===
+        'string'
+    ) {
       return (data as { measurementHash: string }).measurementHash;
     }
   }
   return null;
 }
 
-function successBadge(measurement: string, teeType: string, liveStatus: 'matches' | 'changed' | 'unavailable' | null): string {
-  const shortMeasurement = `${measurement.substring(0, 12)}...${measurement.substring(measurement.length - 8)}`;
+function successBadge(
+  measurement: string,
+  liveStatus: 'matches' | 'changed' | 'unavailable' | null
+): string {
+  const shortMeasurement = `${measurement.substring(
+    0,
+    12
+  )}...${measurement.substring(measurement.length - 8)}`;
 
   let statusHtml = '';
   if (liveStatus === 'matches') {
-    statusHtml = '<div class="live-status matches">🟢 Live workload matches</div>';
+    statusHtml =
+      '<div class="live-status matches">🟢 Live workload matches</div>';
   } else if (liveStatus === 'changed') {
-    statusHtml = '<div class="live-status changed">⚠️ Measurement changed</div>';
+    statusHtml =
+      '<div class="live-status changed">⚠️ Measurement changed</div>';
   } else if (liveStatus === 'unavailable') {
-    statusHtml = '<div class="live-status unavailable">⚠️ Live check unavailable</div>';
+    statusHtml =
+      '<div class="live-status unavailable">⚠️ Live check unavailable</div>';
   }
 
   return `
@@ -193,9 +206,8 @@ function successBadge(measurement: string, teeType: string, liveStatus: 'matches
   <div class="badge">
     <div class="icon">✓</div>
     <div class="content">
-      <div class="label">Developer Attestation</div>
+      <div class="label">Attestation</div>
       <div class="title">Verified by nilCC</div>
-      <div class="measurement">${teeType}</div>
       <div class="measurement">${shortMeasurement}</div>
       ${statusHtml}
     </div>
@@ -224,7 +236,7 @@ function errorBadge(message: string): string {
       display: inline-flex;
       align-items: center;
       gap: 12px;
-      border-radius: 10px;
+      border-radius: 24px;
       padding: 12px 16px;
       border: 1px solid #fca5a5;
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
