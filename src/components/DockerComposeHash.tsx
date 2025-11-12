@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Info } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { dockerComposesha256Hex } from '@/lib/hash';
 
 interface DockerComposeHashProps {
   dockerCompose: string;
@@ -19,19 +20,7 @@ export default function DockerComposeHash({
 
   useEffect(() => {
     const calculateHash = async () => {
-      // Convert string to ArrayBuffer
-      const encoder = new TextEncoder();
-      const data = encoder.encode(dockerCompose);
-
-      // Calculate SHA-256
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-
-      // Convert ArrayBuffer to hex string
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-
+      const hashHex = await dockerComposesha256Hex(dockerCompose);
       setHash(hashHex);
     };
 

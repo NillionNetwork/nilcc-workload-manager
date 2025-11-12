@@ -1,21 +1,34 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, Input, Button, Modal, Alert } from '@/components/ui';
+import { Card, CardContent, Input, Button, Modal } from '@/components/ui';
+import { ManualResourceTierInput } from '@/components/verify/ManualResourceTierInput';
+import { ManualArtifactVersionInput } from '@/components/verify/ManualArtifactVersionInput';
+import { ArtifactVersionSelect } from '@/components/verify/ArtifactVersionSelect';
+import { ResourceTierSelect } from '@/components/verify/ResourceTierSelect';
+import { PreComputerToggle } from '@/components/verify/PreComputerToggle';
+import { WorkloadSelect } from '@/components/verify/WorkloadSelect';
+import { AttestationBadgePreview } from '@/components/verify/AttestationBadgePreview';
+import { EmbedCode } from '@/components/verify/EmbedCode';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Artifact, WorkloadTier } from '@/lib/nilcc-types';
+import { Artifact, WorkloadTier, WorkloadResponse } from '@/lib/nilcc-types';
+import { dockerComposesha256Hex } from '@/lib/hash';
 
 export default function VerifyPage() {
   const { client, apiKey } = useSettings();
 
-  const [measurementHash, setMeasurementHash] = useState('7ed75de7865771c8e4faa378fa738e3effe5a83d68dfb90335211c45311e5cedde0373a58c2bdeb38a46b96af3782f0d');
-  const [dockerComposeHash, setDockerComposeHash] = useState('3ca4dafba09c64e1811a116354db9ba61582268e381d3f452a2dafbd80eca041');
+  const [measurementHash, setMeasurementHash] = useState('');
+  const [dockerComposeHash, setDockerComposeHash] = useState('');
+
+  // Workloads
+  const [workloads, setWorkloads] = useState<WorkloadResponse[]>([]);
+  const [selectedWorkloadId, setSelectedWorkloadId] = useState<string>('');
+  const [loadingWorkloads, setLoadingWorkloads] = useState(true);
 
   // Tiers and artifacts (mirror workloads/create when apiKey present)
   const [tiers, setTiers] = useState<WorkloadTier[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
   const [loadingTiers, setLoadingTiers] = useState(true);
-
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [selectedArtifactVersion, setSelectedArtifactVersion] = useState<string>('');
   const [loadingArtifacts, setLoadingArtifacts] = useState(true);
@@ -28,6 +41,72 @@ export default function VerifyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [verified, setVerified] = useState<boolean | null>(null);
+  const [precomputeMode, setPrecomputeMode] = useState(false)
+  const [reportUrlInput, setReportUrlInput] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+
+  // Fetch workloads
+  useEffect(() => {
+    if (client && apiKey) {
+      setLoadingWorkloads(true);
+      client
+        .listWorkloads()
+        .then((fetchedWorkloads) => {
+          setWorkloads(fetchedWorkloads);
+          if (fetchedWorkloads.length > 0) {
+            setSelectedWorkloadId(fetchedWorkloads[0].workloadId);
+            // Auto-populate report URL for first workload
+            if (fetchedWorkloads[0].domain) {
+              setReportUrlInput(`https://${fetchedWorkloads[0].domain}/nilcc/api/v2/report`);
+            }
+          }
+        })
+        .catch(() => { })
+        .finally(() => setLoadingWorkloads(false));
+    } else {
+      setLoadingWorkloads(false);
+    }
+  }, [client, apiKey]);
+
+  // Recalculate docker compose hash and report URL when selected workload changes
+  useEffect(() => {
+    const selected = workloads.find((w) => w.workloadId === selectedWorkloadId);
+    if (selected?.dockerCompose) {
+      dockerComposesha256Hex(selected.dockerCompose)
+        .then(setDockerComposeHash)
+        .catch(() => { });
+    } else {
+      setDockerComposeHash('');
+    }
+
+    // Auto-populate report URL when workload changes
+    if (selected?.domain) {
+      setReportUrlInput(`https://${selected.domain}/nilcc/api/v2/report`);
+    }
+  }, [selectedWorkloadId, workloads]);
+
+  // Precompute measurement hash from workload when precompute mode is enabled
+  useEffect(() => {
+    if (!precomputeMode || !selectedWorkloadId) return;
+    let cancelled = false;
+
+    const selectedWorkload = workloads.find(w => w.workloadId === selectedWorkloadId);
+    if (!selectedWorkload?.domain) return;
+
+    const reportUrl = `https://${selectedWorkload.domain}/nilcc/api/v2/report`;
+
+    fetch(reportUrl)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled) {
+          const measurement = data?.report?.measurement;
+          if (measurement) setMeasurementHash(measurement);
+        }
+      })
+      .catch(() => { /* ignore errors; user can input manually */ });
+
+    return () => { cancelled = true; };
+  }, [precomputeMode, selectedWorkloadId, workloads]);
 
   // Fetch tiers
   useEffect(() => {
@@ -69,10 +148,11 @@ export default function VerifyPage() {
     e.preventDefault();
     setSubmitting(true);
     setVerified(null);
+    setVerificationUrl('');
     try {
       const effectiveNilccVersion = apiKey ? selectedArtifactVersion : nilccVersionInput;
       const effectiveVcpus = apiKey ? (selectedTier?.cpus ?? 0) : parseInt(vcpusInput || '0', 10);
-      const res = await fetch('/verify', {
+      const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,6 +167,9 @@ export default function VerifyPage() {
         setVerified(false);
       } else {
         setVerified(Boolean(data?.proof_of_cloud));
+        if (data?.verificationUrl) {
+          setVerificationUrl(data.verificationUrl);
+        }
       }
     } catch {
       setVerified(false);
@@ -105,6 +188,19 @@ export default function VerifyPage() {
       <form onSubmit={onVerify} className="space-y-2">
         <Card>
           <CardContent>
+
+            <WorkloadSelect
+              loading={loadingWorkloads}
+              workloads={workloads}
+              value={selectedWorkloadId}
+              onChange={setSelectedWorkloadId}
+            />
+
+            <p className='mb-2'>In order to verify your measurement hash, you have two options. </p>
+
+            {/* Precompute/Local toggle switch */}
+            <PreComputerToggle value={precomputeMode} onChange={setPrecomputeMode} />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Measurement Hash</label>
@@ -112,7 +208,6 @@ export default function VerifyPage() {
                   type="text"
                   value={measurementHash}
                   onChange={(e) => setMeasurementHash(e.target.value)}
-                  placeholder="7ed75de7865771c8e4faa378fa738e3effe5a83d68dfb90335211c45311e5cedde0373a58c2bdeb38a46b96af3782f0d"
                   required
                   className="h-7 text-xs mt-0.5"
                 />
@@ -124,7 +219,6 @@ export default function VerifyPage() {
                   type="text"
                   value={dockerComposeHash}
                   onChange={(e) => setDockerComposeHash(e.target.value)}
-                  placeholder="3ca4dafba09c64e1811a116354db9ba61582268e381d3f452a2dafbd80eca041"
                   required
                   className="h-7 text-xs mt-0.5"
                 />
@@ -135,91 +229,25 @@ export default function VerifyPage() {
             {apiKey ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr] gap-4 mt-4">
                 {/* Resource Tier */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Resource Tier</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select tier to set CPU, Memory, Disk & Cost</label>
-                  {loadingTiers && (
-                    <p className="text-muted-foreground text-xs mt-0.5">Loading tiers...</p>
-                  )}
-                  {!loadingTiers && tiers.length > 0 && (
-                    <select
-                      value={selectedTierId}
-                      onChange={(e) => setSelectedTierId(e.target.value)}
-                      className="w-full p-2 text-xs border border-border rounded-md bg-background"
-                      required
-                    >
-                      {tiers.map((tier) => (
-                        <option key={tier.tierId} value={tier.tierId}>
-                          {tier.name} - {tier.cpus} CPU • {tier.memoryMb}MB RAM • {tier.diskGb}GB Disk • {tier.cost} credit/min
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {!loadingTiers && tiers.length === 0 && (
-                    <Alert variant="warning" className="px-2 mt-0.5">
-                      <p className="text-xs">No tiers available</p>
-                    </Alert>
-                  )}
-                </div>
+                <ResourceTierSelect
+                  loading={loadingTiers}
+                  tiers={tiers}
+                  value={selectedTierId}
+                  onChange={setSelectedTierId}
+                />
 
                 {/* Artifact Version */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Artifact Version</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select the VM image version</label>
-                  {loadingArtifacts && (
-                    <p className="text-muted-foreground text-xs mt-0.5">Loading artifact versions...</p>
-                  )}
-                  {!loadingArtifacts && artifacts.length > 0 && (
-                    <select
-                      value={selectedArtifactVersion}
-                      onChange={(e) => setSelectedArtifactVersion(e.target.value)}
-                      className="w-full p-2 text-xs border border-border rounded-md bg-background"
-                    >
-                      {artifacts.map((artifact) => (
-                        <option key={artifact.version} value={artifact.version}>
-                          {artifact.version} (Built: {new Date(artifact.builtAt).toLocaleDateString()})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {!loadingArtifacts && artifacts.length === 0 && (
-                    <Alert variant="warning" className="px-2 mt-0.5">
-                      <p className="text-xs">No artifact versions available. Using default.</p>
-                    </Alert>
-                  )}
-                </div>
+                <ArtifactVersionSelect
+                  loading={loadingArtifacts}
+                  artifacts={artifacts}
+                  value={selectedArtifactVersion}
+                  onChange={setSelectedArtifactVersion}
+                />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr] gap-4 mt-4">
-                {/* Resource Tier (manual input for VCPUs) */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Resource Tier</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select tier to set CPU, Memory, Disk & Cost</label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={vcpusInput}
-                    onChange={(e) => setVcpusInput(e.target.value)}
-                    placeholder="2"
-                    min="1"
-                    required
-                    className="h-7 text-xs mt-0.5"
-                  />
-                </div>
-
-                {/* Artifact Version (manual input for version) */}
-                <div>
-                  <h4 className="text-xs font-medium text-card-foreground mb-1">Artifact Version</h4>
-                  <label className="text-xs text-muted-foreground block mb-2">Select the VM image version</label>
-                  <Input
-                    type="text"
-                    value={nilccVersionInput}
-                    onChange={(e) => setNilccVersionInput(e.target.value)}
-                    placeholder="0.2.1"
-                    required
-                    className="h-7 text-xs mt-0.5"
-                  />
-                </div>
+                  <ManualResourceTierInput value={vcpusInput} onValueChange={setVcpusInput} />
+                  <ManualArtifactVersionInput value={nilccVersionInput} onValueChange={setNilccVersionInput} />
               </div>
             )}
           </CardContent>
@@ -242,9 +270,83 @@ export default function VerifyPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={"Verification Result"}
+        size={verified ? 'xl' : 'md'}
       >
         {verified === true && (
-          <p style={{ color: '#16a34a' }} className="text-sm">Measurement hash verified.</p>
+          <div className="space-y-4">
+            <p style={{ color: '#16a34a' }} className="text-sm">
+              Measurement hash verified successfully.
+            </p>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Verification URL (Your GitHub Attestation JSON)
+              </label>
+              <Input
+                type="text"
+                value={verificationUrl}
+                onChange={(e) => setVerificationUrl(e.target.value)}
+                className="h-7 text-xs font-mono"
+                placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter the GitHub URL to your attestation JSON file. Badge will validate against this.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Report URL (Optional - Live Workload Check)
+              </label>
+              <Input
+                type="text"
+                value={reportUrlInput}
+                onChange={(e) => setReportUrlInput(e.target.value)}
+                placeholder="https://<your-domain>/nilcc/api/v2/report"
+                className="h-7 text-xs"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Add to compare live workload measurement with verified hash
+              </p>
+            </div>
+
+            {verificationUrl && (
+              <>
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Preview:</label>
+                  <div className="bg-muted/30 p-4 rounded-lg flex justify-center">
+                    <AttestationBadgePreview
+                      verificationUrl={verificationUrl}
+                      reportUrl={reportUrlInput || undefined}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Embed code:</label>
+                  <EmbedCode
+                    verificationUrl={verificationUrl}
+                    reportUrl={reportUrlInput || undefined}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="text-xs text-muted-foreground pt-2">
+              <span>
+                See the&nbsp;
+                <a
+                  href="https://docs.nillion.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#2563eb', textDecoration: 'underline' }}
+                >
+                  Nillion documentation
+                </a>
+                &nbsp;for more details.
+              </span>
+            </div>
+          </div>
         )}
         {verified === false && (
           <p className="text-sm text-destructive">Could not verify measurement hash.</p>
@@ -253,5 +355,4 @@ export default function VerifyPage() {
     </div>
   );
 }
-
 

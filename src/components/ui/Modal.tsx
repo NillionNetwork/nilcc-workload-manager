@@ -7,9 +7,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       // Prevent scroll when modal is open
@@ -36,7 +37,9 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       {/* Modal */}
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-background rounded-lg shadow-xl border border-border">
+          <div className={`relative w-full bg-background rounded-lg shadow-xl border border-border ${
+            size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-lg' : size === 'xl' ? 'max-w-2xl' : 'max-w-md'
+          }`}>
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-lg font-semibold text-foreground">{title}</h2>
