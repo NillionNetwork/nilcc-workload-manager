@@ -285,60 +285,73 @@ export default function VerifyPage() {
       >
         {verified === true && (
           <div className="space-y-4">
-            <p style={{ color: '#16a34a' }} className="text-sm">
-              Measurement hash verified successfully.
+            <p style={{ color: '#16a34a' }} className="text-sm font-semibold">
+              ✅ Measurement hash verified successfully!
             </p>
-            <h4> Embed badge (Optional)</h4>
-            <div className="text-xs text-muted-foreground">
-              <span>
-                See the verify &nbsp;
-                <a
-                  href="https://docs.nillion.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#2563eb', textDecoration: 'underline' }}
-                >
-                  documentation
-                </a>
-                &nbsp;for more details.
-              </span>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">
-                Verification URL (Your GitHub Attestation JSON)
-              </label>
-              <Input
-                type="text"
-                value={verificationUrl}
-                onChange={(e) => setVerificationUrl(e.target.value)}
-                className="h-7 text-xs font-mono"
-                placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
-              />
+
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold mb-2">Next Steps: Create Attestation JSON</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Create a file named <code className="bg-muted px-1 py-0.5 rounded">measurement-hash.json</code> in your GitHub repository with the following content:
+              </p>
+
+              <div className="bg-muted/50 p-3 rounded font-mono text-xs overflow-auto">
+                <pre>{`{
+  "measurementHash": "${measurementHash}",
+  "reportUrl": "${reportUrlInput || 'https://your-workload.com/nilcc/api/v2/report'}",
+  "allowedDomains": [
+    "${reportUrlInput ? new URL(reportUrlInput).hostname : 'your-workload.com'}",
+    "github.com"
+  ]
+}`}</pre>
+              </div>
+
+              <p className="text-xs text-muted-foreground mt-2">
+                <strong>allowedDomains</strong>: Only these domains can display the verification badge. Add your workload domain and any sites where you want to embed the badge (like GitHub). Localhost is always allowed for development.
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Enter the GitHub URL to your attestation JSON file. Badge will validate against this.
+                Upload this file to your GitHub repository, then use the GitHub URL to that file for badge embedding.
               </p>
             </div>
 
-            {verificationUrl && (
-              <>
-                <div>
-                  <label className="text-sm font-semibold mb-2 block">Preview:</label>
-                  <div className="bg-muted/30 p-4 rounded-lg flex justify-center">
-                    <AttestationBadgePreview
-                      verificationUrl={verificationUrl}
-                      reportUrl={reportUrlInput || undefined}
-                    />
-                  </div>
-                </div>
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold mb-2">Embed Badge</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                After uploading the JSON file to GitHub, enter the URL below to preview and get the embed code.
+              </p>
 
-                <EmbedCode
-                  verificationUrl={verificationUrl}
-                  reportUrl={reportUrlInput || undefined}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  GitHub URL to your measurement-hash.json
+                </label>
+                <Input
+                  type="text"
+                  value={verificationUrl}
+                  onChange={(e) => setVerificationUrl(e.target.value)}
+                  className="h-7 text-xs font-mono"
+                  placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
                 />
-              </>
-            )}
+              </div>
 
+              {verificationUrl && (
+                <>
+                  <div className="mt-4">
+                    <label className="text-sm font-semibold mb-2 block">Preview:</label>
+                    <div className="bg-muted/30 p-4 rounded-lg flex justify-center">
+                      <AttestationBadgePreview
+                        verificationUrl={verificationUrl}
+                        reportUrl={reportUrlInput || undefined}
+                      />
+                    </div>
+                  </div>
 
+                  <EmbedCode
+                    verificationUrl={verificationUrl}
+                    reportUrl={reportUrlInput || undefined}
+                  />
+                </>
+              )}
+            </div>
           </div>
         )}
         {verified === false && (

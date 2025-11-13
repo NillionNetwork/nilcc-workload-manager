@@ -27,13 +27,53 @@ export async function GET(request: NextRequest) {
 
     const verificationData = await verificationResponse.json();
 
-    // Parse measurement hash from JSON structure like {"0.1.0": "hash..."}
-    const measurementHash = extractMeasurementHash(verificationData);
+    // Parse measurement hash from JSON
+    const measurementHash = verificationData.measurementHash || extractMeasurementHash(verificationData);
+    const allowedDomains = verificationData.allowedDomains || [];
 
     if (!measurementHash) {
       return new NextResponse(errorBadge('Invalid verification format'), {
         headers: { 'Content-Type': 'text/html' },
       });
+    }
+
+    // Domain whitelist validation
+    if (allowedDomains && Array.isArray(allowedDomains) && allowedDomains.length > 0) {
+      const referer = request.headers.get('referer');
+
+      if (referer) {
+        try {
+          const refererUrl = new URL(referer);
+          const refererDomain = refererUrl.hostname;
+
+          // Always allow localhost for development
+          const isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(refererDomain) ||
+                             refererDomain.startsWith('localhost:') ||
+                             refererDomain.startsWith('127.0.0.1:');
+
+          if (isLocalhost) {
+            // Allow localhost without checking allowedDomains
+          } else {
+            // Check if referer domain is in allowedDomains
+            const isAllowed = allowedDomains.some((domain: string) => {
+              // Exact match or subdomain match
+              return refererDomain === domain || refererDomain.endsWith('.' + domain);
+            });
+
+            if (!isAllowed) {
+              return new NextResponse(
+                errorBadge('Not authorized to display this badge'),
+                {
+                  headers: { 'Content-Type': 'text/html' },
+                }
+              );
+            }
+          }
+        } catch {
+          // Invalid referer URL, allow it (could be local development)
+        }
+      }
+      // If no referer header, allow it (could be direct access or testing)
     }
 
     let liveStatus: 'matches' | 'changed' | 'unavailable' | null = null;

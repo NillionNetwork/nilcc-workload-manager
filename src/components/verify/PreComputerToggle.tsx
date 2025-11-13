@@ -35,7 +35,7 @@ function InfoTooltip() {
       </button>
       {show && (
         <div
-          className="absolute left-1/2 z-20 w-64 -translate-x-1/2 mt-2 text-xs py-2 px-3 rounded border"
+          className="absolute right-0 z-20 w-64 mt-2 text-xs py-2 px-3 rounded border"
           style={{ backgroundColor: 'var(--nillion-primary)', color: 'white' }}
           role="tooltip"
         >
@@ -92,9 +92,10 @@ export function PreComputerToggle({ value, onChange }: PreComputerToggleProps) {
         />
         <span className="sr-only">{value ? "Precompute mode" : "Local mode"}</span>
       </button>
-      <span className="text-xs text-muted-foreground">Local Generated</span>
-      <InfoTooltip />
-
+      <span className="flex items-center gap-1">
+        <span className="text-xs text-muted-foreground">Local Generated</span>
+        <InfoTooltip />
+      </span>
     </div>
   );
 }
