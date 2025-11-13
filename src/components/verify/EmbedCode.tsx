@@ -27,7 +27,6 @@ export function EmbedCode({ verificationUrl, reportUrl }: EmbedCodeProps) {
   src="${deploymentUrl}/api/badge?${badgeParams}"
   width={260}
   height={90}
-  scrolling="no"
   style={{ border: 'none' }}
 />`
     : '';
