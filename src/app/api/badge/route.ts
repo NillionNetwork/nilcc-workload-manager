@@ -117,13 +117,19 @@ function successBadge(
     12
   )}...${measurement.substring(measurement.length - 8)}`;
 
+  // Determine badge appearance based on live status
+  const isFailed = liveStatus === 'changed';
+  const iconBg = isFailed ? '#ef4444' : '#16a34a';
+  const iconSymbol = isFailed ? '✗' : '✓';
+  const borderColor = isFailed ? '#fca5a5' : '#e5e7eb';
+
   let statusHtml = '';
   if (liveStatus === 'matches') {
     statusHtml =
       '<div class="live-status matches">🟢 Live workload matches</div>';
   } else if (liveStatus === 'changed') {
     statusHtml =
-      '<div class="live-status changed">⚠️ Measurement changed</div>';
+      '<div class="live-status failed">❌ Verification failed</div>';
   } else if (liveStatus === 'unavailable') {
     statusHtml =
       '<div class="live-status unavailable">⚠️ Live check unavailable</div>';
@@ -150,7 +156,7 @@ function successBadge(
       gap: 12px;
       border-radius: 10px;
       padding: 12px 16px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid ${borderColor};
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
       background: white;
     }
@@ -158,7 +164,7 @@ function successBadge(
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: #16a34a;
+      background: ${iconBg};
       color: white;
       display: flex;
       align-items: center;
@@ -194,8 +200,8 @@ function successBadge(
     .live-status.matches {
       color: #16a34a;
     }
-    .live-status.changed {
-      color: #f59e0b;
+    .live-status.failed {
+      color: #ef4444;
     }
     .live-status.unavailable {
       color: #9ca3af;
@@ -204,7 +210,7 @@ function successBadge(
 </head>
 <body>
   <div class="badge">
-    <div class="icon">✓</div>
+    <div class="icon">${iconSymbol}</div>
     <div class="content">
       <div class="label">Attestation</div>
       <div class="title">Verified by nilCC</div>

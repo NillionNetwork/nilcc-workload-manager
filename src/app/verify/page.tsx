@@ -196,7 +196,18 @@ export default function VerifyPage() {
               onChange={setSelectedWorkloadId}
             />
 
-            <p className='mb-2'>In order to verify your measurement hash, you have two options. </p>
+            <p className='mb-2'>
+              In order to verify your measurement hash, you have two options.{" "}
+              <a
+                href="https://docs.nillion.com/build/compute/attestation"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                See documentation
+              </a>
+              .
+            </p>
 
             {/* Precompute/Local toggle switch */}
             <PreComputerToggle value={precomputeMode} onChange={setPrecomputeMode} />
