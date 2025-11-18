@@ -311,6 +311,7 @@ export default function VerifyPage() {
                   </ul>
                 </li>
               </ul>
+              <p>Add <strong>these files</strong> to your repo (<a href="https://github.com/nillionnetwork/nilcc-verifier-template" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>) </p>
 
 
               {/* <div className="bg-muted/50 p-3 rounded font-mono text-xs overflow-auto">
@@ -333,14 +334,14 @@ export default function VerifyPage() {
 
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">
-                  GitHub URL to your measurement-hash.json
+                  GitHub URL to your verification-manifest.json
                 </label>
                 <Input
                   type="text"
                   value={verificationUrl}
                   onChange={(e) => setVerificationUrl(e.target.value)}
                   className="h-7 text-xs font-mono"
-                  placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
+                  placeholder="https://github.com/user/repo/blob/main/verification-manifest.json"
                 />
               </div>
 
