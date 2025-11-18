@@ -290,12 +290,30 @@ export default function VerifyPage() {
             </p>
 
             <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold mb-2">Next Steps: Create Attestation JSON</h4>
+              <h4 className="text-sm font-semibold mb-2">Next Steps (Optional) </h4>
               <p className="text-xs text-muted-foreground mb-3">
-                Create a file named <code className="bg-muted px-1 py-0.5 rounded">measurement-hash.json</code> in your GitHub repository with the following content:
+                If you would like to extend the verification to users, you have the option to add an embedded badge on your website.
               </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Prerequsities
+              </p>
+              <ul className="text-xs text-muted-foreground mb-4 list-disc pl-4">
+                <li>Make sure you have a <strong>public GitHub repository</strong>.</li>
+                <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/nillionnetwork/nilcc-verifier-template" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>):
+                  <ul className="list-disc pl-4">
+                    <li><code>docker-compose.yml</code> in your root directory</li>
+                    <li><code>script/update-verification.sh</code> &ndash; for generating hashes and updating the JSON file</li>
+                    <li><code>.github/workflows/verify-measurement.yml</code>
+                    </li>
+                    <li>
+                      Edit the <code>allowedDomains</code> field in your file to include any domains (websites) where you want to display the badge.
+                    </li>
+                  </ul>
+                </li>
+              </ul>
 
-              <div className="bg-muted/50 p-3 rounded font-mono text-xs overflow-auto">
+
+              {/* <div className="bg-muted/50 p-3 rounded font-mono text-xs overflow-auto">
                 <pre>{`{
   "measurementHash": "${measurementHash}",
   "reportUrl": "${reportUrlInput || 'https://your-workload.com/nilcc/api/v2/report'}",
@@ -304,14 +322,7 @@ export default function VerifyPage() {
     "github.com"
   ]
 }`}</pre>
-              </div>
-
-              <p className="text-xs text-muted-foreground mt-2">
-                <strong>allowedDomains</strong>: Only these domains can display the verification badge. Add your workload domain and any sites where you want to embed the badge (like GitHub). Localhost is always allowed for development.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Upload this file to your GitHub repository, then use the GitHub URL to that file for badge embedding.
-              </p>
+              </div> */}
             </div>
 
             <div className="border-t pt-4">
