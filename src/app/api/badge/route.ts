@@ -14,6 +14,36 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Parse GitHub URL to extract owner, repo, branch, and filepath
+    const githubInfo = parseGitHubUrl(verificationUrl);
+
+    if (!githubInfo) {
+      return new NextResponse(errorBadge('Invalid GitHub URL'), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Verify that the latest commit author is github-actions[bot]
+    const isVerified = await verifyGitHubActionCommit(
+      githubInfo.owner,
+      githubInfo.repo,
+      githubInfo.branch,
+      githubInfo.filepath
+    );
+
+    if (!isVerified) {
+      return new NextResponse(errorBadge('Verification file not committed by GitHub Actions'), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    console.log('✅ GitHub Actions commit verified:', {
+      owner: githubInfo.owner,
+      repo: githubInfo.repo,
+      branch: githubInfo.branch,
+      filepath: githubInfo.filepath
+    });
+
     // Convert GitHub blob URL to raw URL if needed
     const rawUrl = convertToRawGitHubUrl(verificationUrl);
 
@@ -27,9 +57,27 @@ export async function GET(request: NextRequest) {
 
     const verificationData = await verificationResponse.json();
 
-    // Parse measurement hash from JSON
-    const measurementHash = verificationData.measurementHash || extractMeasurementHash(verificationData);
-    const allowedDomains = verificationData.allowedDomains || [];
+    // Parse measurement hash from new version-based JSON format
+    // Expected format: { "0.3.6": { "measurement_hash": "...", "allowedDomains": [...], ... } }
+    const versionKeys = Object.keys(verificationData);
+    if (versionKeys.length === 0) {
+      return new NextResponse(errorBadge('Invalid verification format'), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Get the first/only version object
+    const versionKey = versionKeys[0];
+    const versionData = verificationData[versionKey];
+
+    if (!versionData || typeof versionData !== 'object') {
+      return new NextResponse(errorBadge('Invalid verification format'), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    const measurementHash = versionData.measurement_hash;
+    const allowedDomains = versionData.allowedDomains || [];
 
     if (!measurementHash) {
       return new NextResponse(errorBadge('Invalid verification format'), {
@@ -124,28 +172,92 @@ function convertToRawGitHubUrl(url: string): string {
   return url;
 }
 
-function extractMeasurementHash(data: unknown): string | null {
-  // Handle different JSON structures
-  if (typeof data === 'object' && data !== null) {
-    // Structure: {"0.1.0": "measurement_hash"}
-    const entries = Object.entries(data);
-    if (entries.length > 0) {
-      const [, value] = entries[0];
-      if (typeof value === 'string' && value.length > 0) {
-        return value;
-      }
+function parseGitHubUrl(url: string): { owner: string; repo: string; branch: string; filepath: string } | null {
+  try {
+    // Handle both blob and raw URLs
+    // Blob: https://github.com/owner/repo/blob/branch/path/to/file.json
+    // Raw: https://raw.githubusercontent.com/owner/repo/branch/path/to/file.json
+
+    const urlObj = new URL(url);
+
+    if (urlObj.hostname === 'github.com') {
+      // Format: github.com/owner/repo/blob/branch/path/to/file.json
+      const parts = urlObj.pathname.split('/').filter(p => p.length > 0);
+      if (parts.length < 5 || parts[2] !== 'blob') return null;
+
+      const owner = parts[0];
+      const repo = parts[1];
+      const branch = parts[3];
+      const filepath = parts.slice(4).join('/');
+
+      return { owner, repo, branch, filepath };
+    } else if (urlObj.hostname === 'raw.githubusercontent.com') {
+      // Format: raw.githubusercontent.com/owner/repo/branch/path/to/file.json
+      const parts = urlObj.pathname.split('/').filter(p => p.length > 0);
+      if (parts.length < 4) return null;
+
+      const owner = parts[0];
+      const repo = parts[1];
+      const branch = parts[2];
+      const filepath = parts.slice(3).join('/');
+
+      return { owner, repo, branch, filepath };
     }
 
-    // Alternative structure: {measurementHash: "..."}
-    if (
-      'measurementHash' in data &&
-      typeof (data as { measurementHash?: unknown }).measurementHash ===
-        'string'
-    ) {
-      return (data as { measurementHash: string }).measurementHash;
-    }
+    return null;
+  } catch {
+    return null;
   }
-  return null;
+}
+
+async function verifyGitHubActionCommit(
+  owner: string,
+  repo: string,
+  branch: string,
+  filepath: string
+): Promise<boolean> {
+  const githubToken = process.env.GITHUB_TOKEN;
+
+  if (!githubToken) {
+    // No token available - fail closed
+    return false;
+  }
+
+  try {
+    // Get the latest commit for this specific file
+    const commitsUrl = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(filepath)}&sha=${encodeURIComponent(branch)}&per_page=1`;
+
+    const response = await fetch(commitsUrl, {
+      headers: {
+        'Authorization': `Bearer ${githubToken}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const commits = await response.json();
+
+    if (!Array.isArray(commits) || commits.length === 0) {
+      return false;
+    }
+
+    const latestCommit = commits[0];
+
+    // Check if the commit author is github-actions[bot]
+    // We check both author.name and committer.login for flexibility
+    const isGitHubAction =
+      latestCommit?.commit?.author?.name === 'github-actions[bot]' ||
+      latestCommit?.committer?.login === 'github-actions[bot]';
+
+    return isGitHubAction;
+  } catch {
+    // Fail closed on errors
+    return false;
+  }
 }
 
 function successBadge(
