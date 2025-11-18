@@ -299,31 +299,18 @@ export default function VerifyPage() {
               </p>
               <ul className="text-xs text-muted-foreground mb-4 list-disc pl-4">
                 <li>Make sure you have a <strong>public GitHub repository</strong>.</li>
-                <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/nillionnetwork/nilcc-verifier-template" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>):
+                <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/NillionNetwork/nilcc-attestation-example" target="_blank" rel="noopener noreferrer" className="underline">example repo here</a>):
                   <ul className="list-disc pl-4">
-                    <li><code>docker-compose.yml</code> in your root directory</li>
-                    <li><code>script/update-verification.sh</code> &ndash; for generating hashes and updating the JSON file</li>
-                    <li><code>.github/workflows/verify-measurement.yml</code>
-                    </li>
+                    <li><code>docker-compose.yaml</code> in your root directory</li>
+                    <li><code>script/update-verification.sh</code></li>
+                    <li><code>.github/workflows/verify-measurement.yml</code></li>
                     <li>
                       Edit the <code>allowedDomains</code> field in your file to include any domains (websites) where you want to display the badge.
                     </li>
                   </ul>
                 </li>
               </ul>
-              <p>Add <strong>these files</strong> to your repo (<a href="https://github.com/nillionnetwork/nilcc-verifier-template" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>) </p>
-
-
-              {/* <div className="bg-muted/50 p-3 rounded font-mono text-xs overflow-auto">
-                <pre>{`{
-  "measurementHash": "${measurementHash}",
-  "reportUrl": "${reportUrlInput || 'https://your-workload.com/nilcc/api/v2/report'}",
-  "allowedDomains": [
-    "${reportUrlInput ? new URL(reportUrlInput).hostname : 'your-workload.com'}",
-    "github.com"
-  ]
-}`}</pre>
-              </div> */}
+              <p className="text-xs text-muted-foreground mb-3"> Detailed documentation <a href="https://docs.nillion.com/build/compute/verify" target="_blank" rel="noopener noreferrer" className="underline">here</a> </p>
             </div>
 
             <div className="border-t pt-4">
