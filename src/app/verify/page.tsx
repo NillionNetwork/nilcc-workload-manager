@@ -267,6 +267,7 @@ export default function VerifyPage() {
         <div className="flex items-center justify-end pt-2">
           <Button
             type="submit"
+            data-umami-event="verify_workload_verify_api"
             loading={submitting}
             disabled={
               submitting || (apiKey ? (!selectedTierId || loadingTiers || loadingArtifacts) : (!nilccVersionInput || !vcpusInput))
@@ -340,6 +341,7 @@ export default function VerifyPage() {
                   value={verificationUrl}
                   onChange={(e) => setVerificationUrl(e.target.value)}
                   className="h-7 text-xs font-mono"
+                  data-umami-event="verify_workload_badge_api_input"
                   placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
                 />
               </div>
