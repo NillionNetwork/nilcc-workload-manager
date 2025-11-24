@@ -199,7 +199,7 @@ export default function VerifyPage() {
             <p className='mb-2'>
               In order to verify your measurement hash, you have two options.{" "}
               <a
-                href="https://docs.nillion.com/build/compute/attestation"
+                href="https://docs.nillion.com/build/compute/verify"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline"
