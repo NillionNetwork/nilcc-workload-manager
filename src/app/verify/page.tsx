@@ -300,7 +300,7 @@ export default function VerifyPage() {
               </p>
               <ul className="text-xs text-muted-foreground mb-4 list-disc pl-4">
                 <li>Make sure you have a <strong>public GitHub repository</strong>.</li>
-                <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/nillionnetwork/nilcc-verifier-template" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>):
+                <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/NillionNetwork/nilcc-attestation-example" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>):
                   <ul className="list-disc pl-4">
                     <li><code>docker-compose.yml</code> in your root directory</li>
                     <li><code>script/update-verification.sh</code> &ndash; for generating hashes and updating the JSON file</li>
