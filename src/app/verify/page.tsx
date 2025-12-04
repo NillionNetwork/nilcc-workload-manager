@@ -294,6 +294,7 @@ export default function VerifyPage() {
               <h4 className="text-sm font-semibold mb-2">Next Steps (Optional) </h4>
               <p className="text-xs text-muted-foreground mb-3">
                 If you would like to extend the verification to users, you have the option to add an embedded badge on your website.
+                (<a href="https://docs.nillion.com/build/compute/verify#badge-embedding-optional" target="_blank" rel="noopener noreferrer" className="underline">Documentation</a>)
               </p>
               <p className="text-xs text-muted-foreground mb-3">
                 Prerequsities
