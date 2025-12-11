@@ -65,6 +65,10 @@ export default function CreateWorkloadPage() {
   // Environment variables
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([]);
 
+  // Heartbeat configuration
+  const [heartbeatEnabled, setHeartbeatEnabled] = useState(false);
+  const [measurementHashUrl, setMeasurementHashUrl] = useState("");
+
   // Docker Registry Credentials
   const [dockerCredentials, setDockerCredentials] = useState<
     DockerCredential[]
@@ -239,6 +243,10 @@ export default function CreateWorkloadPage() {
         files: Object.keys(filesObject).length > 0 ? filesObject : undefined,
         dockerCredentials:
           dockerCredentials.length > 0 ? dockerCredentials : undefined,
+        heartbeat:
+          heartbeatEnabled && measurementHashUrl
+            ? { measurementHashUrl }
+            : undefined,
       };
 
       const workloadData =
@@ -507,6 +515,42 @@ export default function CreateWorkloadPage() {
                       No artifact versions available. Using default.
                     </p>
                   </Alert>
+                )}
+              </div>
+            </div>
+
+            {/* Heartbeat Configuration - Full Width Row */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <h4 className="text-xs font-medium text-card-foreground mb-1">
+                    Heartbeat
+                  </h4>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={heartbeatEnabled}
+                      onChange={(e) => setHeartbeatEnabled(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-xs">Enable continuous attestation by nilAV nodes <span className="text-muted-foreground">(Optional)</span></span>
+                  </label>
+                </div>
+
+                {heartbeatEnabled && (
+                  <div className="flex-1 max-w-2xl">
+                    <label className="text-xs text-muted-foreground block mb-1">
+                      Measurement Hash URL *
+                    </label>
+                    <Input
+                      type="url"
+                      value={measurementHashUrl}
+                      onChange={(e) => setMeasurementHashUrl(e.target.value)}
+                      placeholder="https://github.com/yourorg/yourapp/blob/main/measurement-hash-index.json"
+                      required={heartbeatEnabled}
+                      className="h-8 text-sm"
+                    />
+                  </div>
                 )}
               </div>
             </div>
