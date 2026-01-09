@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, Button } from '@/components/ui';
+import { PreComputerToggle } from '@/components/verify/PreComputerToggle';
 import { WorkloadSelect } from '@/components/verify/WorkloadSelect';
 import { WorkloadResponse } from '@/lib/nilcc-types';
 
@@ -14,6 +15,10 @@ interface VerifyAttestationTabProps {
   rawReport: string;
   submitting: boolean;
   onVerify: (e: React.FormEvent) => void;
+  precomputeMode: boolean;
+  onPrecomputeModeChange: (value: boolean) => void;
+  manualReport: string;
+  onManualReportChange: (value: string) => void;
 }
 
 export function VerifyAttestationTab({
@@ -26,24 +31,50 @@ export function VerifyAttestationTab({
   rawReport,
   submitting,
   onVerify,
+  precomputeMode,
+  onPrecomputeModeChange,
+  manualReport,
+  onManualReportChange,
 }: VerifyAttestationTabProps) {
   return (
     <form onSubmit={onVerify} className="space-y-2">
       <Card>
         <CardContent>
-          <WorkloadSelect
-            loading={loadingWorkloads}
-            workloads={workloads}
-            value={selectedWorkloadId}
-            onChange={onWorkloadChange}
-          />
+          {/* Move the Precomputed/Manual toggle above the workload selector */}
+          <PreComputerToggle value={precomputeMode} onChange={onPrecomputeModeChange} />
 
-          {reportLoading && (
-            <p className="text-xs text-muted-foreground mt-4">Loading report data...</p>
+          {precomputeMode && (
+            <WorkloadSelect
+              loading={loadingWorkloads}
+              workloads={workloads}
+              value={selectedWorkloadId}
+              onChange={onWorkloadChange}
+            />
           )}
 
-          {reportError && (
+          {precomputeMode && (loadingWorkloads || reportLoading) && (
+            <p className="text-xs text-muted-foreground mt-4">
+              {loadingWorkloads ? 'Loading workloads...' : 'Loading report data...'}
+            </p>
+          )}
+
+          {precomputeMode && !loadingWorkloads && reportError && (
             <p className="text-xs text-destructive mt-4">{reportError}</p>
+          )}
+
+          {(!precomputeMode || (!loadingWorkloads && !reportLoading && !reportError)) && (
+            <div>
+              <label className="text-xs text-muted-foreground">Report Data</label>
+              <textarea
+                value={precomputeMode ? rawReport : manualReport}
+                onChange={(e) => onManualReportChange(e.target.value)}
+                disabled={precomputeMode}
+                placeholder=""
+                className={`w-full h-20 p-2 text-xs font-mono mt-0.5 border border-border rounded-md resize-none ${
+                  precomputeMode ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-background'
+                }`}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
@@ -53,7 +84,12 @@ export function VerifyAttestationTab({
           type="submit"
           data-umami-event="verify_workload_verify_amd_api"
           loading={submitting}
-          disabled={submitting || reportLoading || !rawReport}
+          disabled={
+            submitting ||
+            (precomputeMode && reportLoading) ||
+            (!precomputeMode && !manualReport) ||
+            (precomputeMode && !rawReport)
+          }
         >
           Verify
         </Button>

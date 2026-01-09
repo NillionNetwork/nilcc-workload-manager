@@ -35,6 +35,15 @@ export default function VerifyPage() {
   const [verified, setVerified] = useState<boolean | null>(null);
   const [verifiedFrom, setVerifiedFrom] = useState<VerifiedFrom>(null);
 
+  // Precompute mode and manual inputs (shared across tabs)
+  const [precomputeMode, setPrecomputeMode] = useState(true);
+  const [manualReport, setManualReport] = useState('');
+  const [manualMeasurementHash, setManualMeasurementHash] = useState('');
+  const [manualDockerComposeHash, setManualDockerComposeHash] = useState('');
+  const [manualNilccVersion, setManualNilccVersion] = useState('');
+  const [manualVmType, setManualVmType] = useState('');
+  const [manualVcpus, setManualVcpus] = useState('');
+
   // Use the workload report hook
   const { data: reportData, loading: reportLoading, error: reportError } = useWorkloadReport(
     selectedWorkloadId,
@@ -79,6 +88,9 @@ export default function VerifyPage() {
     }
   }, [selectedWorkloadId, workloads]);
 
+  // Get the report to use based on mode
+  const reportToUse = precomputeMode ? reportData.rawReport : manualReport;
+
   // Handler for Tab 1 - Verify Attestation + Measurement
   const handleVerifyNew = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,11 +102,11 @@ export default function VerifyPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          report: reportData.rawReport,
-          docker_compose_hash: dockerComposeHash,
-          nilcc_version: reportData.nilccVersion,
-          vcpus: reportData.vcpus,
-          vm_type: reportData.vmType,
+          report: reportToUse,
+          docker_compose_hash: precomputeMode ? dockerComposeHash : manualDockerComposeHash,
+          nilcc_version: precomputeMode ? reportData.nilccVersion : manualNilccVersion,
+          vcpus: precomputeMode ? reportData.vcpus : Number(manualVcpus),
+          vm_type: precomputeMode ? reportData.vmType : manualVmType,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -118,7 +130,7 @@ export default function VerifyPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          report: reportData.rawReport,
+          report: reportToUse,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -138,7 +150,7 @@ export default function VerifyPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-4">
+      <div className="flex space-x-2 mb-4">
         <button
           type="button"
           onClick={() => setActiveTab('attestation-measurement')}
@@ -176,6 +188,20 @@ export default function VerifyPage() {
           dockerComposeHash={dockerComposeHash}
           submitting={submitting}
           onVerify={handleVerifyNew}
+          precomputeMode={precomputeMode}
+          onPrecomputeModeChange={setPrecomputeMode}
+          manualReport={manualReport}
+          onManualReportChange={setManualReport}
+          manualMeasurementHash={manualMeasurementHash}
+          onManualMeasurementHashChange={setManualMeasurementHash}
+          manualDockerComposeHash={manualDockerComposeHash}
+          onManualDockerComposeHashChange={setManualDockerComposeHash}
+          manualNilccVersion={manualNilccVersion}
+          onManualNilccVersionChange={setManualNilccVersion}
+          manualVmType={manualVmType}
+          onManualVmTypeChange={setManualVmType}
+          manualVcpus={manualVcpus}
+          onManualVcpusChange={setManualVcpus}
         />
       )}
 
@@ -191,6 +217,10 @@ export default function VerifyPage() {
           rawReport={reportData.rawReport}
           submitting={submitting}
           onVerify={handleVerifyAmd}
+          precomputeMode={precomputeMode}
+          onPrecomputeModeChange={setPrecomputeMode}
+          manualReport={manualReport}
+          onManualReportChange={setManualReport}
         />
       )}
 
