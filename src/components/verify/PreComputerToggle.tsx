@@ -51,7 +51,7 @@ export function PreComputerToggle({ value, onChange }: PreComputerToggleProps) {
   return (
     <div className="flex items-center space-x-3 mb-3">
       <span className="text-xs text-muted-foreground flex items-center">
-        Precomputed
+        From Workload
       </span>
       <button
         type="button"
