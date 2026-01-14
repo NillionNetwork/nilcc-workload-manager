@@ -814,7 +814,7 @@ export default function WorkloadDetailPage() {
                                 : event.details.kind}
                             </span>
                             <time className="text-xs text-muted-foreground">
-                              {new Date(event.timestamp).toLocaleTimeString()}
+                              {new Date(event.timestamp).toLocaleString()}
                             </time>
                           </div>
                           {event.details.kind === 'failedToStart' && (
