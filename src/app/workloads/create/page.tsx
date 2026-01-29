@@ -533,7 +533,7 @@ export default function CreateWorkloadPage() {
                       onChange={(e) => setHeartbeatEnabled(e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <span className="text-xs">Enable continuous attestation by nilAV nodes <span className="text-muted-foreground">(Optional)</span></span>
+                    <span className="text-xs">Enable continuous attestation verifications in the <a href="https://docs.nillion.com/blacklight/learn/overview" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Blacklight Network</a> <span className="text-muted-foreground">(Optional)</span></span>
                   </label>
                 </div>
 
