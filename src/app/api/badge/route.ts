@@ -32,18 +32,13 @@ export async function GET(request: NextRequest) {
     );
 
     if (!isVerified) {
-      return new NextResponse(errorBadge('Verification file not committed by GitHub Actions'), {
-        headers: { 'Content-Type': 'text/html' },
-      });
+      return new NextResponse(
+        errorBadge('Verification file not committed by GitHub Actions'),
+        {
+          headers: { 'Content-Type': 'text/html' },
+        }
+      );
     }
-
-    console.log('✅ GitHub Actions commit verified:', {
-      owner: githubInfo.owner,
-      repo: githubInfo.repo,
-      branch: githubInfo.branch,
-      filepath: githubInfo.filepath
-    });
-
     // Convert GitHub blob URL to raw URL if needed
     const rawUrl = convertToRawGitHubUrl(verificationUrl);
 
@@ -147,7 +142,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return new NextResponse(successBadge(measurementHash, liveStatus), {
+    return new NextResponse(successBadge(measurementHash, liveStatus, verificationUrl), {
       headers: {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -264,7 +259,8 @@ async function verifyGitHubActionCommit(
 
 function successBadge(
   measurement: string,
-  liveStatus: 'matches' | 'changed' | 'unavailable' | null
+  liveStatus: 'matches' | 'changed' | 'unavailable' | null,
+  verificationUrl: string
 ): string {
   const shortMeasurement = `${measurement.substring(
     0,
@@ -304,6 +300,10 @@ function successBadge(
       height: 100vh;
       background: transparent;
     }
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
     .badge {
       display: inline-flex;
       align-items: center;
@@ -313,6 +313,11 @@ function successBadge(
       border: 1px solid ${borderColor};
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
       background: white;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .badge:hover {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border-color: #9ca3af;
     }
     .icon {
       width: 32px;
@@ -363,15 +368,17 @@ function successBadge(
   </style>
 </head>
 <body>
-  <div class="badge">
-    <div class="icon">${iconSymbol}</div>
-    <div class="content">
-      <div class="label">Attestation</div>
-      <div class="title">Verified by nilCC</div>
-      <div class="measurement">${shortMeasurement}</div>
-      ${statusHtml}
+  <a href="${verificationUrl}" target="_blank" rel="noopener noreferrer">
+    <div class="badge">
+      <div class="icon">${iconSymbol}</div>
+      <div class="content">
+        <div class="label">Attestation</div>
+        <div class="title">Verified by nilCC</div>
+        <div class="measurement">${shortMeasurement}</div>
+        ${statusHtml}
+      </div>
     </div>
-  </div>
+  </a>
 </body>
 </html>`;
 }
