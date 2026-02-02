@@ -39,9 +39,8 @@ function InfoTooltip() {
           style={{ backgroundColor: 'var(--nillion-primary)', color: 'white' }}
           role="tooltip"
         >
-          <strong>Precomputed</strong>: Uses the pre-generated attestation hash from the /report URL. Verifies against a known measured value.<br /><br />
-          <strong>Local Generated</strong>: Measures and verifies from your current running workload, for real-time local integrity checking.<br /><br />
-          Choose <strong>Precomputed</strong> for reproducible, auditable attestation. Choose <strong>Local Generated</strong> for true, local checks.
+          <strong>Precomputed</strong>: Uses the report data fetched from the selected workload.<br /><br />
+          <strong>Manual</strong>: Manually enter report data to verify.
         </div>
       )}
     </span>
@@ -52,7 +51,7 @@ export function PreComputerToggle({ value, onChange }: PreComputerToggleProps) {
   return (
     <div className="flex items-center space-x-3 mb-3">
       <span className="text-xs text-muted-foreground flex items-center">
-        Precomputed
+        From Workload
       </span>
       <button
         type="button"
@@ -90,10 +89,10 @@ export function PreComputerToggle({ value, onChange }: PreComputerToggleProps) {
             pointerEvents: 'none'
           }}
         />
-        <span className="sr-only">{value ? "Precompute mode" : "Local mode"}</span>
+        <span className="sr-only">{value ? "Precompute mode" : "Manual mode"}</span>
       </button>
       <span className="flex items-center gap-1">
-        <span className="text-xs text-muted-foreground">Local Generated</span>
+        <span className="text-xs text-muted-foreground">Manual</span>
         <InfoTooltip />
       </span>
     </div>
