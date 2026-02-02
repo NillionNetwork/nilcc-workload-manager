@@ -53,7 +53,7 @@ export function VerificationResultModal({
             </p>
             <ul className="text-xs text-muted-foreground mb-4 list-disc pl-4">
               <li>Make sure you have a <strong>public GitHub repository</strong>.</li>
-              <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/nillionnetwork/nilcc-verifier-template" target="_blank" rel="noopener noreferrer" className="underline">starter templates here</a>):
+              <li>Add <strong>these files</strong> to your repo (<a href="https://github.com/NillionNetwork/nilcc-attestation-example" target="_blank" rel="noopener noreferrer" className="underline">example repo here</a>):
                 <ul className="list-disc pl-4">
                   <li><code>docker-compose.yml</code> in your root directory</li>
                   <li><code>script/update-verification.sh</code> &ndash; for generating hashes and updating the JSON file</li>
@@ -64,6 +64,7 @@ export function VerificationResultModal({
                 </ul>
               </li>
             </ul>
+            <p className="text-xs text-muted-foreground mb-3"> Check out the detailed documentation <a href="https://docs.nillion.com/build/compute/verify" target="_blank" rel="noopener noreferrer" className="underline">here</a>. </p>
           </div>
 
           <div className="border-t pt-4">
@@ -74,7 +75,7 @@ export function VerificationResultModal({
 
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
-                GitHub URL to your measurement-hash.json
+                GitHub URL to your verification-manifest.json
               </label>
               <Input
                 type="text"
@@ -82,7 +83,7 @@ export function VerificationResultModal({
                 onChange={(e) => setVerificationUrl(e.target.value)}
                 className="h-7 text-xs font-mono"
                 data-umami-event="verify_workload_badge_api_input"
-                placeholder="https://github.com/user/repo/blob/main/measurement-hash.json"
+                placeholder="https://github.com/user/repo/blob/main/verification-manifest.json"
               />
             </div>
 
