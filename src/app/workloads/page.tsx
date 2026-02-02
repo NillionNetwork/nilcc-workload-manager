@@ -88,7 +88,7 @@ export default function WorkloadsPage() {
             Refresh
           </Button>
           <Link href="/workloads/create">
-            <Button>
+            <Button data-umami-event="create_workload_via_button">
               <Plus className="h-4 w-4 mr-2" />
               Create Workload
             </Button>

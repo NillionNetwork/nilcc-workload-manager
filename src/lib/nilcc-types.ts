@@ -27,13 +27,16 @@ export interface CreateWorkloadRequest {
   envVars?: Record<string, string>;
   files?: Record<string, string>;
   dockerCredentials?: DockerCredential[];
-  
+  heartbeat?: {
+    measurementHashUrl: string;
+  };
+
   // For public Docker images
   dockerImage?: string;
   containerPort?: number;
   serviceName?: string;
-  
-  // For Docker Compose configurations  
+
+  // For Docker Compose configurations
   dockerCompose?: string;
   serviceToExpose?: string;
   servicePortToExpose?: number;
@@ -56,6 +59,9 @@ export interface WorkloadResponse {
   accountId: string;
   envVars?: Record<string, string>;
   files?: Record<string, string>;
+  heartbeat?: {
+    measurementHashUrl: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

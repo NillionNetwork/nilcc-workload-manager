@@ -343,25 +343,23 @@ export default function WorkloadDetailPage() {
             <div className="lg:col-span-2 space-y-6">
               {/* Status and Access */}
               <Card>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-card-foreground">
-                      Status
-                    </h4>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={statusBadgeVariant}>
-                        <span className="flex items-center gap-1">
-                          {showStatusSpinner && (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          )}
-                          {workload.status}
-                        </span>
-                      </Badge>
-                      {actionInProgress && (
-                        <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
+                <CardContent className="relative">
+                  <div className="flex items-center space-x-2 absolute top-0 right-0">
+                    <Badge variant={statusBadgeVariant}>
+                      <span className="flex items-center gap-1">
+                        {showStatusSpinner && (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        )}
+                        {workload.status}
+                      </span>
+                    </Badge>
+                    {actionInProgress && (
+                      <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
                   </div>
+                  <h4 className="text-lg font-semibold text-card-foreground mb-2">
+                    Status
+                  </h4>
 
                   {/* Metadata */}
                   <div className="grid grid-cols-4 gap-4 mb-4">
@@ -669,6 +667,40 @@ export default function WorkloadDetailPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Heartbeat */}
+              {workload.heartbeat && (
+                <Card>
+                  <CardContent className="relative">
+                    <Badge variant="success" className="text-xs absolute top-0 right-0">
+                      <Activity className="h-3 w-3 mr-1" />
+                      Enabled
+                    </Badge>
+                    <h4 className="text-lg font-semibold text-card-foreground mb-1">
+                      Heartbeat
+                    </h4>
+                    <div>
+                      <label className="text-sm text-muted-foreground block mb-1">
+                        Measurement Hash URL
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <code className="flex-1 px-2 py-1.5 bg-muted border border-border rounded text-xs text-foreground break-all">
+                          {workload.heartbeat.measurementHashUrl}
+                        </code>
+                        <a
+                          href={workload.heartbeat.measurementHashUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </a>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Resource Allocation */}
               <Card>

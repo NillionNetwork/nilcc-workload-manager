@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     envVars?: Record<string, string>;
     files?: Record<string, string>;
     dockerCredentials?: Array<{server: string; username: string; password: string}>;
+    heartbeat?: { measurementHashUrl: string };
     dockerCompose?: string;
     publicContainerName?: string;
     publicContainerPort?: number;
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
     envVars: body.envVars,
     files: body.files,
     dockerCredentials: body.dockerCredentials,
+    heartbeat: body.heartbeat,
   };
 
   if (body.dockerImage) {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import Script from "next/script";
 import './globals.css';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import Navbar from '@/components/Navbar';
@@ -62,6 +63,11 @@ export default function RootLayout({
           </main>
         </SettingsProvider>
       </body>
+      <Script
+        async
+        src="https://cloud.umami.is/script.js"
+        data-website-id="91805735-d0c7-4a08-ba09-75ccfd5601ee"
+      />
     </html>
   );
 }

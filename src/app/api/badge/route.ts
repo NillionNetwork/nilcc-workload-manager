@@ -145,7 +145,9 @@ export async function GET(request: NextRequest) {
     return new NextResponse(successBadge(measurementHash, liveStatus, verificationUrl), {
       headers: {
         'Content-Type': 'text/html',
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour since verification is immutable
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch {

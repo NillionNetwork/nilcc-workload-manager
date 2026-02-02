@@ -97,6 +97,7 @@ export default function Home() {
             e.currentTarget.style.borderColor = "var(--nillion-border)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
+          data-umami-event="create_workload_via_header"
         >
           <h3
             style={{

@@ -199,7 +199,7 @@ export default function VerifyPage() {
             <p className='mb-2'>
               In order to verify your measurement hash, you have two options.{" "}
               <a
-                href="https://docs.nillion.com/build/compute/attestation"
+                href="https://docs.nillion.com/build/compute/verify"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline"
@@ -267,6 +267,7 @@ export default function VerifyPage() {
         <div className="flex items-center justify-end pt-2">
           <Button
             type="submit"
+            data-umami-event="verify_workload_verify_api"
             loading={submitting}
             disabled={
               submitting || (apiKey ? (!selectedTierId || loadingTiers || loadingArtifacts) : (!nilccVersionInput || !vcpusInput))
