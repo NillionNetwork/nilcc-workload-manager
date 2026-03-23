@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${apiBaseUrl}/api/v1/workload-events/list`, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(`${apiBaseUrl}/api/v1/accounts/me`, {
       method: 'GET',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });

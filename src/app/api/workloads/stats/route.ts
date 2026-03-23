@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${apiHost}/api/v1/workloads/stats`, {
       method: 'POST',
       headers: {
-        'x-api-key': apiToken,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ workloadId }),
