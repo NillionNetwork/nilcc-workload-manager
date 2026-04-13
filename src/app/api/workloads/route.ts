@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(`${apiBaseUrl}/api/v1/workloads/list`, {
       method: 'GET',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${apiBaseUrl}/api/v1/workloads/create`, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(nilccPayload),

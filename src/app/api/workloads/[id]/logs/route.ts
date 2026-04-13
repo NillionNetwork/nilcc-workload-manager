@@ -19,7 +19,7 @@ export async function POST(
     const response = await fetch(`${apiBaseUrl}/api/v1/workloads/logs`, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),

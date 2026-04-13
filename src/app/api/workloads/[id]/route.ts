@@ -18,7 +18,7 @@ export async function GET(
     const response = await fetch(`${apiBaseUrl}/api/v1/workloads/${id}`, {
       method: 'GET',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
@@ -59,7 +59,7 @@ export async function DELETE(
     const response = await fetch(`${apiBaseUrl}/api/v1/workloads/delete`, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ workloadId: id }),
